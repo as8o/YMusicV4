@@ -1,6 +1,8 @@
 package io.ymusic.ui
 
 import io.ymusic.dynamicengine.yt.YtFeedItem
+import io.ymusic.dynamicengine.yt.extractPlaylistDetail
+import io.ymusic.dynamicengine.yt.extractMusicBrowse
 import io.ymusic.dynamicengine.yt.YtThumb
 import io.ymusic.mediastore.model.MediaStoreItem
 import io.ymusic.player.PlayableItem
@@ -150,6 +152,18 @@ class PlaybackCoordinator(
             listOf(video.toYtMedia()),
             source = NextQueueSource.radio(graph.engines, video.id, log?.fork("queue-source")),
         )
+    }
+
+    /** Play a whole playlist or start at the track selected in Android Auto. */
+    suspend fun playAutoPlaylist(url: String, selectedVideoId: String? = null) {
+        val page = if (url.startsWith(MusicBrowsePrefix)) graph.engines.extractMusicBrowse(url)
+            else graph.engines.extractPlaylistDetail(url)
+        val songs = page.sections.flatMap { it.items }.filter { it.kind == YtFeedItem.KIND_VIDEO }
+        if (songs.isEmpty()) return
+        // The list's paging source continues after the first page.
+        val startIndex = selectedVideoId?.let { selected -> songs.indexOfFirst { it.id == selected }.takeIf { it >= 0 } } ?: 0
+        playAll(songs, startIndex = startIndex, shuffle = false,
+            source = NextQueueSource.playlist(graph.engines, url, songs, page.pageHeader?.itemCount, log?.fork("queue-source")))
     }
 
     /** Play [video] alone — no radio. */
