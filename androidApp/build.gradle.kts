@@ -53,7 +53,8 @@ android {
     ndkVersion = "28.2.13676358"
 
     defaultConfig {
-        applicationId = "io.ymusic.android"
+        // Test-only package; keep the upstream package when aaTest is not set.
+        applicationId = if (providers.gradleProperty("aaTest").orNull == "true") "io.ymusic.android.aatest" else "io.ymusic.android"
         minSdk = Versions.minSdk
         targetSdk = Versions.targetSdk
         versionCode = 16
