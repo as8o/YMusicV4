@@ -132,13 +132,13 @@ class MediaBrowseTree(private val context: Context, private val graph: AppGraph)
             parentId == YTM_CHARTS -> feedChildren(graph.engines.extractMusicCharts())
             parentId.startsWith(YT_LIST_PREFIX) -> {
                 val url = parentId.removePrefix(YT_LIST_PREFIX)
-                feedChildren(
-                    if (url.startsWith(MusicBrowsePrefix)) {
-                        graph.engines.extractMusicBrowse(url)
-                    } else {
-                        graph.engines.extractPlaylistDetail(url)
-                    },
-                )
+                val page = if (url.startsWith(MusicBrowsePrefix)) {
+                    graph.engines.extractMusicBrowse(url)
+                } else {
+                    graph.engines.extractPlaylistDetail(url)
+                }
+                // An explicit playable row works with Auto hosts that treat playlist folders as navigation only.
+                listOf(playableAction(YT_PLAY_ALL_PREFIX + url, "Play all")) + feedChildren(page)
             }
             parentId.startsWith(YT_FEED_PREFIX) ->
                 feedChildren(graph.engines.extractChannelDetail(parentId.removePrefix(YT_FEED_PREFIX)))
@@ -150,6 +150,7 @@ class MediaBrowseTree(private val context: Context, private val graph: AppGraph)
 
     suspend fun item(mediaId: String): MediaItem? = when {
         mediaId == ROOT -> rootItem()
+        mediaId.startsWith(YT_PLAY_ALL_PREFIX) -> playableAction(mediaId, "Play all")
         mediaId.startsWith(YT_SONG_PREFIX) -> {
             val videoId = mediaId.removePrefix(YT_SONG_PREFIX)
             ytItem(videoId)?.toMediaItem(groupTitle = null)
@@ -293,6 +294,11 @@ class MediaBrowseTree(private val context: Context, private val graph: AppGraph)
 
     // ---- item builders ----
 
+    private fun playableAction(id: String, title: String): MediaItem =
+        MediaItem.Builder().setMediaId(id).setMediaMetadata(
+            MediaMetadata.Builder().setTitle(title).setIsBrowsable(false).setIsPlayable(true).build()
+        ).build()
+
     private fun browsable(
         id: String,
         title: String,
@@ -349,6 +355,7 @@ class MediaBrowseTree(private val context: Context, private val graph: AppGraph)
         const val YTM_CHARTS = "ytm_charts"
 
         /** Playable YouTube video: `yt:<videoId>`. */
+        const val YT_PLAY_ALL_PREFIX = "ytplayall:"
         const val YT_SONG_PREFIX = "yt:"
 
         /** Browsable engine playlist/album: `ytlist:<engine app link, verbatim>`. */
