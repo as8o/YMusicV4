@@ -277,6 +277,15 @@ class PlaybackService : MediaLibraryService() {
         when {
             // A voice request: no id, the words in requestMetadata (see onAddMediaItems).
             id.isEmpty() -> playFromVoice(chosen.requestMetadata.searchQuery, chosen.requestMetadata.extras)
+            id.startsWith(MediaBrowseTree.YT_LIST_PREFIX) -> {
+                serviceScope.launch { coordinator.playAutoPlaylist(id.removePrefix(MediaBrowseTree.YT_LIST_PREFIX)) }
+            }
+            id.startsWith(MediaBrowseTree.YT_CONTEXT_PREFIX) -> {
+                val context = id.removePrefix(MediaBrowseTree.YT_CONTEXT_PREFIX)
+                val url = context.substringBeforeLast('|')
+                val videoId = context.substringAfterLast('|')
+                serviceScope.launch { coordinator.playAutoPlaylist(url, videoId) }
+            }
             id.startsWith(MediaBrowseTree.YT_SONG_PREFIX) -> {
                 val videoId = id.removePrefix(MediaBrowseTree.YT_SONG_PREFIX)
                 // A cache miss (process died since browsing) still plays from the id alone.
