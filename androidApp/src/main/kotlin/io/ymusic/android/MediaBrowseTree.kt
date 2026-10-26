@@ -315,13 +315,12 @@ class MediaBrowseTree(private val context: Context, private val graph: AppGraph)
         artUrl: String? = null,
         group: String? = null,
         style: Int? = MediaConstants.EXTRAS_VALUE_CONTENT_STYLE_CATEGORY_LIST_ITEM,
-        playable: Boolean = false,
     ): MediaItem {
         val metadata = MediaMetadata.Builder()
             .setTitle(title)
             .setArtist(subtitle)
             .setIsBrowsable(true)
-            .setIsPlayable(playable)
+            .setIsPlayable(false)
             .setExtras(styleExtras(group, style))
         artUrl?.let { metadata.setArtworkUri(artworkContentUri(context, it)) }
         return MediaItem.Builder()
