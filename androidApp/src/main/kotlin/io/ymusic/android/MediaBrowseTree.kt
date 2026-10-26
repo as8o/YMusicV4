@@ -266,6 +266,8 @@ class MediaBrowseTree(private val context: Context, private val graph: AppGraph)
             when (item.kind) {
                 YtFeedItem.KIND_VIDEO -> {
                     remember(item)
+                    // Auto normally returns just a video id; retain the playlist URL so selecting
+                    // a track can queue its containing playlist instead of the recommendation radio.
                     item.toMediaItem(group, playlistUrl?.let { YT_CONTEXT_PREFIX + it + "|" + item.id })
                 }
                 YtFeedItem.KIND_PLAYLIST -> item.url?.let { url ->
@@ -275,7 +277,6 @@ class MediaBrowseTree(private val context: Context, private val graph: AppGraph)
                         subtitle = item.subtitleLine1,
                         artUrl = item.thumbs.lastOrNull()?.url,
                         group = group,
-                        playable = true,
                         style = MediaConstants.EXTRAS_VALUE_CONTENT_STYLE_GRID_ITEM,
                     )
                 }
