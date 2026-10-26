@@ -277,9 +277,7 @@ class PlaybackService : MediaLibraryService() {
         when {
             // A voice request: no id, the words in requestMetadata (see onAddMediaItems).
             id.isEmpty() -> playFromVoice(chosen.requestMetadata.searchQuery, chosen.requestMetadata.extras)
-            id.startsWith(MediaBrowseTree.YT_LIST_PREFIX) -> {
-                serviceScope.launch { coordinator.playAutoPlaylist(id.removePrefix(MediaBrowseTree.YT_LIST_PREFIX)) }
-            }
+            // A playlist track must continue within its playlist, unlike a standalone radio video.
             id.startsWith(MediaBrowseTree.YT_CONTEXT_PREFIX) -> {
                 val context = id.removePrefix(MediaBrowseTree.YT_CONTEXT_PREFIX)
                 val url = context.substringBeforeLast('|')
