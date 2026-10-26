@@ -432,6 +432,20 @@ private fun DetailsHeader(state: VideoDetailsState, details: YtVideoDetails, onO
         Modifier.fillMaxWidth().padding(horizontal = DesignSpacing.Space16, vertical = DesignSpacing.Space8),
         verticalArrangement = Arrangement.spacedBy(DesignSpacing.Space16),
     ) {
+        // YM2 diagnostic build only: expose the parsed metadata on screen so a phone
+        // screenshot can distinguish missing source facts from a broken layout.
+        Text(
+            "DIAGNOSTIC · video=" + state.videoId +
+                " · facts=" + details.factoids.size +
+                " · date=" + details.factoids.any {
+                    val label = it.label.lowercase()
+                    label.contains("date") || label.contains("published") || label.contains("stream")
+                } +
+                " · description=" + !details.description.isNullOrBlank() +
+                " · comments=" + (details.commentsContinuation != null) +
+                "\nFacts: " + details.factoids.joinToString(" | ") { it.label + "=" + it.value },
+            style = androidx.compose.ui.text.TextStyle(fontSize = 11.sp, color = DesignColors.InkSecondary),
+        )
         details.title?.let {
             Text(it, style = androidx.compose.ui.text.TextStyle(fontSize = 17.sp, fontWeight = FontWeight.Bold, color = DesignColors.InkStrong))
         }
