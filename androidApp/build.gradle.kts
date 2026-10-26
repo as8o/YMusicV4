@@ -53,7 +53,7 @@ android {
     ndkVersion = "28.2.13676358"
 
     defaultConfig {
-        applicationId = if (providers.gradleProperty("aaTest").orNull == "true") "io.ymusic.android.ym2" else "io.ymusic.android"
+        applicationId = if (providers.gradleProperty("aaTest").orNull == "true") "io.ymusic.android.ym2diag" else "io.ymusic.android"
         minSdk = Versions.minSdk
         targetSdk = Versions.targetSdk
         versionCode = 16
