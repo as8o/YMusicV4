@@ -154,15 +154,21 @@ class PlaybackCoordinator(
         )
     }
 
-    /** Play a whole playlist or start at the track selected in Android Auto. */
-    suspend fun playAutoPlaylist(url: String, selectedVideoId: String? = null) {
+    /** Preserve mobile playlist queue semantics when Android Auto selects a playlist track. */
+    suspend fun playAutoPlaylist(url: String, selectedVideoId: String) {
         val page = if (url.startsWith(MusicBrowsePrefix)) graph.engines.extractMusicBrowse(url)
             else graph.engines.extractPlaylistDetail(url)
         val songs = page.sections.flatMap { it.items }.filter { it.kind == YtFeedItem.KIND_VIDEO }
         if (songs.isEmpty()) return
-        // The list's paging source continues after the first page.
-        val startIndex = selectedVideoId?.let { selected -> songs.indexOfFirst { it.id == selected }.takeIf { it >= 0 } } ?: 0
-        playAll(songs, startIndex = startIndex, shuffle = false,
+        // Never silently play track zero if the selected track is not on the loaded page.
+        // The browse tree only exposes tracks in that page; a mismatch indicates stale data.
+        val startIndex = songs.indexOfFirst { it.id == selectedVideoId }
+        if (startIndex < 0) {
+            log?.log(Logger.Level.WARN, "Android Auto selected track not found in playlist page: $selectedVideoId")
+            return
+        }
+        // Same playAll + lazy queue source strategy as DetailScreens on the phone.
+        playAll(songs, startIndex = startIndex,
             source = NextQueueSource.playlist(graph.engines, url, songs, page.pageHeader?.itemCount, log?.fork("queue-source")))
     }
 
