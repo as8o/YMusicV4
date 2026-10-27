@@ -436,33 +436,45 @@ private fun DetailsHeader(state: VideoDetailsState, details: YtVideoDetails, onO
             Text(it, style = androidx.compose.ui.text.TextStyle(fontSize = 17.sp, fontWeight = FontWeight.Bold, color = DesignColors.InkStrong))
         }
         if (details.factoids.isNotEmpty()) {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+            // Factoids from YouTube have variable lengths; each gets a bounded share of
+            // the row so none can force its neighbors to wrap one character per line.
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(DesignSpacing.Space8)) {
                 details.factoids.forEach { factoid ->
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(factoid.value, style = androidx.compose.ui.text.TextStyle(fontSize = 16.sp, fontWeight = FontWeight.Bold, color = DesignColors.Ink))
-                        Text(factoid.label, style = androidx.compose.ui.text.TextStyle(fontSize = 12.sp, color = DesignColors.InkSecondary))
+                    Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            factoid.value,
+                            style = androidx.compose.ui.text.TextStyle(fontSize = 16.sp, fontWeight = FontWeight.Bold, color = DesignColors.Ink),
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                        )
+                        Text(
+                            factoid.label,
+                            style = androidx.compose.ui.text.TextStyle(fontSize = 12.sp, color = DesignColors.InkSecondary),
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                        )
                     }
                 }
             }
         }
-        Row(
-            Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(DesignSpacing.Space16),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
+        // Keep the channel and action controls in separate rows. On narrow phones the
+        // fixed-width rating/share controls otherwise leave the channel text nearly zero
+        // width, which produces hundreds of pixels of vertical wrapping.
+        Column(verticalArrangement = Arrangement.spacedBy(DesignSpacing.Space8)) {
             val name = details.channelTitle
             val url = details.channelUrl
-            Row(
-                Modifier
-                    .weight(1f)
-                    .clip(RoundedCornerShape(8.dp))
-                    .then(if (name != null && url != null) Modifier.clickable { onOpenChannel(url, name) } else Modifier),
-                horizontalArrangement = Arrangement.spacedBy(DesignSpacing.Space16),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                if (name != null) {
+            if (name != null) {
+                Row(
+                    Modifier.fillMaxWidth()
+                        .clip(RoundedCornerShape(8.dp))
+                        .then(if (url != null) Modifier.clickable { onOpenChannel(url, name) } else Modifier),
+                    horizontalArrangement = Arrangement.spacedBy(DesignSpacing.Space16),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
                     Avatar(details.channelThumbs, 40.dp)
-                    Column {
+                    Column(Modifier.weight(1f)) {
                         Text(
                             name,
                             style = androidx.compose.ui.text.TextStyle(fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = DesignColors.Ink),
@@ -470,7 +482,7 @@ private fun DetailsHeader(state: VideoDetailsState, details: YtVideoDetails, onO
                             overflow = TextOverflow.Ellipsis,
                         )
                         details.subscribers?.let {
-                            Text(it, style = androidx.compose.ui.text.TextStyle(fontSize = 12.sp, color = DesignColors.InkSecondary))
+                            Text(it, style = androidx.compose.ui.text.TextStyle(fontSize = 12.sp, color = DesignColors.InkSecondary), maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
                     }
                 }
