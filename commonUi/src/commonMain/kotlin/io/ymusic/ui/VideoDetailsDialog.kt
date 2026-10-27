@@ -440,7 +440,10 @@ private fun DetailsHeader(state: VideoDetailsState, details: YtVideoDetails, onO
             // the row so none can force its neighbors to wrap one character per line.
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(DesignSpacing.Space8)) {
                 details.factoids.forEach { factoid ->
-                    Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+                    // Distribute available space by the displayed value's approximate length.
+                    // Large view counts need more space than short Likes or date figures.
+                    val relativeWidth = factoid.value.length.coerceIn(3, 14).toFloat()
+                    Column(Modifier.weight(relativeWidth), horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(
                             factoid.value,
                             style = androidx.compose.ui.text.TextStyle(fontSize = 16.sp, fontWeight = FontWeight.Bold, color = DesignColors.Ink),
