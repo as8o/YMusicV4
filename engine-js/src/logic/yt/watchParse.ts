@@ -98,17 +98,7 @@ export function videoDetailsOf(root: Record<string, unknown>): WireVideoDetails 
           const factoid = factoidOf(f);
           if (factoid !== undefined) list.push(factoid);
         }
-        // Diagnostic build only: report renderer shapes without logging account tokens or raw responses.
-        // YouTube can move the published date outside the usual factoid renderer.
-        list.push({
-          "label": "DBG renderer keys",
-          "value": Object.keys(value).filter(k => /factoid|date|publish|view|time/i.test(k)).join(",") || "(none)",
-        });
-        list.push({
-          "label": "DBG factoid kinds",
-          "value": facts.map(f => isObj(f) ? Object.keys(f).join("+") : "?").join(",").slice(0, 180),
-        });
-        out["factoids"] = list;
+        if (list.length > 0) out["factoids"] = list;
       }
       return true;
     }
