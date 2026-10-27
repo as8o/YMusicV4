@@ -1,22 +1,16 @@
-# Android Auto: preserve playlist playback context when selecting a track
+# Android Auto: load playlist into the queue when selecting a track in the playlist
 
-> **PR summary:** Keep YouTube playlists navigable in Android Auto, but when a user selects a video *inside* a playlist, play it in the context of that playlist rather than starting a video-based recommendation radio.
->
-> This document describes the feature-only change. The separate YM2 test APK's name, blue icon, application ID, and CI workflow are **not** part of this PR.
+> **PR summary:** When a user selects a video *inside* a playlist in **Android Auto**, play it in the context of that playlist rather than starting a video-based recommendation radio. This follows the logic of the Android app. 
 
 ## Problem
 
-In the phone app, opening a YouTube playlist and tapping a track starts that track **with the playlist as the playback queue**. The following tracks are therefore the subsequent items from that playlist.
-
-Previously in Android Auto, the same interaction started the chosen track using `PlaybackCoordinator.playNow(video)`. That API intentionally attaches `NextQueueSource.radio(...)`, which loads YouTube's radio/watch-next recommendations rather than the chosen playlist. The first song can appear correct, but pressing Next or allowing autoplay may continue with unrelated tracks.
-
-This is a context-loss bug, not a problem with playlist extraction or audio playback.
+In the phone app, opening a YouTube playlist and tapping a track starts that track **with the playlist as the playback queue**. In Android Auto, the same interaction starts the specfic video, but loads radio/watch-next recommendations in the queue insetad of the playlist. It happens because the logic starts the chosen track using `PlaybackCoordinator.playNow(video)`. That API intentionally attaches `NextQueueSource.radio(...)`, which loads YouTube's radio/watch-next recommendations instead of the playlist. 
 
 ### Reproduce on the original Android Auto implementation
 
-Prerequisite: sign in to a YouTube account with an accessible playlist containing at least three distinct tracks, and connect YMusic to Android Auto.
+Use a YouTube account containing at least one playlist with several different videos:
 
-1. In Android Auto, open YMusic and navigate to the signed-in **Discover / account library** area where YouTube playlists are shown. (The top-level **Library > Playlists** in this codebase is the *local* media-store library; it is a different source.)
+1. In Android Auto, open YMusic and navigate to the signed-in **Discover / account library** area where YouTube playlists are shown. 
 2. Open a YouTube playlist.
 3. Tap the **second** track, not the first.
 4. Confirm that the second track starts.
@@ -24,13 +18,13 @@ Prerequisite: sign in to a YouTube account with an accessible playlist containin
 
 **Before:** Android Auto calls `playNow(video)`, creating a recommendation-radio queue. The remaining playlist order is not preserved.
 
-**Expected:** The selected track plays now, while the queue remains the playlist in its original order. Next moves to the next playlist track, with additional playlist pages loaded as necessary.
+**Expected:** The selected track plays now, while the queue is updated to the playlist in its original order. Next moves to the next playlist track.
 
 ## Why it happened
 
 The Android Auto browse tree originally identifies an online track only by `yt:<videoId>`, regardless of where it appeared. A Media3 controller sends that media ID to `PlaybackService` when a row is selected. By then, `PlaybackService` has no reliable indication that the row came from a specific playlist and routes all `yt:` rows to `coordinator.playNow(video)`.
 
-The mobile playlist screen has the missing context: `DetailScreens.kt` invokes the existing `coordinator.playAll(videos, startIndex = …, source = ready.queueSource(...))`. This PR gives Android Auto enough context to use that same queueing behavior, without changing the phone screen.
+The mobile playlist screen has the missing context: `DetailScreens.kt` invokes the existing `coordinator.playAll(videos, startIndex = …, source = ready.queueSource(...))`. This PR gives Android Auto enough context to use that same queueing behavior.
 
 ## Implementation
 
@@ -69,28 +63,13 @@ The small `suspend fun playAutoPlaylist(url, selectedVideoId)` adapter:
 
 ## Verify the fix
 
-Use a YouTube account containing at least one playlist with several unmistakably different videos:
+Use a YouTube account containing at least one playlist with several different videos:
 
-1. **Browse:** In Android Auto, navigate to a YouTube playlist and tap its title. The playlist should **open** as a list of videos rather than play immediately.
-2. **Start at a non-first track:** Tap track 2 (or track 3). Verify that exact track starts, not track 1.
+1. **Browse:** In Android Auto, navigate to a YouTube playlist and tap its title. 
+2. **Start at a non-first track:** Tap track 2 (or track 3). Verify that exact track starts.
 3. **Queue:** Confirm that the playing queue corresponds to that playlist, in playlist order, including the tracks before the selected entry as part of the queue where the player exposes them.
 4. **Next:** Press the car's Next/steering-wheel control. Verify playback advances to the next entry in the chosen playlist, **not** a video recommendation.
 5. **Continuation:** In a long playlist, play across the initially fetched page boundary and confirm that further playlist tracks load.
 6. **Regression—standalone video:** Play a video directly from a non-playlist YouTube feed or search. Its original `playNow`/radio behavior should remain.
 7. **Regression—local music:** Verify that the local **Library > Playlists** navigation and song playback still work.
 8. **Regression—navigation:** Verify Back returns from playlist contents normally; no implicit Play all action or new playlist menu appears.
-
-**Observed in testing:** The YM2 test variant was tested in a car and its playlist-context playback was reported working. The checklists above describe how others can reproduce and verify; they are not claims that every edge case has been tested automatically.
-
-## Scope and non-goals
-
-- **Included:** Android Auto playlist-aware selection and queue continuation, while keeping folders navigable.
-- **Not included:** New Play all rows, dual browsable/playable playlist folders, changing the phone UI, changing standalone radio playback, local playlist alterations, new artwork, or branding/package IDs.
-- **Known limitation:** A track absent from a refetched initial page is not resolved through further pages; the helper declines to select a different track. This can be addressed separately if reproducible.
-
-## Review notes
-
-- Three Kotlin files only; no new dependencies.
-- The existing player and queue-source APIs are used as-is.
-- Context is encoded only for video rows that belong to a playlist, avoiding global behavior changes.
-- The test-app-specific code is held on a separate YM2 branch and is deliberately excluded from the upstream PR.
