@@ -91,14 +91,44 @@ export function videoDetailsOf(root: Record<string, unknown>): WireVideoDetails 
       return true;
     }
     if (key === "videoDescriptionHeaderRenderer") {
+      // Diagnostic-only: append bounded, sanitized renderer structure to the existing
+      // factoid list so the screenshot identifies alternate date paths without raw JSON.
+      const diagnostics: WireFactoid[] = [];
+      const brief = (v: unknown): string => {
+        if (v === null || v === undefined) return "(absent)";
+        if (typeof v === "string") return v.slice(0, 80);
+        if (typeof v === "number" || typeof v === "boolean") return String(v);
+        if (Array.isArray(v)) return "array(" + v.length + ")";
+        if (isObj(v)) return "{" + Object.keys(v).slice(0, 10).join(",") + "}";
+        return typeof v;
+      };
+      const field = (label: string, v: unknown) => diagnostics.push({ label: "DBG " + label, value: brief(v) });
+      field("publishDate", value["publishDate"]);
+      field("views", value["views"]);
       const facts = value["factoid"];
       if (Array.isArray(facts)) {
+        facts.forEach((node, i) => {
+          if (!isObj(node)) return;
+          const kind = Object.keys(node)[0];
+          if (kind === undefined) return;
+          const renderer = node[kind];
+          field("kind" + i, kind);
+          field("keys" + i, renderer);
+          if (isObj(renderer)) {
+            for (const k of ["value", "label", "dateText", "date", "publishedTime", "uploadTime", "factoid", "timestamp"]) {
+              if (renderer[k] !== undefined) field(i + "." + k, renderer[k]);
+            }
+          }
+        });
+      }
+      const factsOriginal = value["factoid"];
+      if (Array.isArray(factsOriginal)) {
         const list: WireFactoid[] = [];
-        for (const f of facts) {
+        for (const f of factsOriginal) {
           const factoid = factoidOf(f);
           if (factoid !== undefined) list.push(factoid);
         }
-        if (list.length > 0) out["factoids"] = list;
+        out["factoids"] = [...list, ...diagnostics];
       }
       return true;
     }
