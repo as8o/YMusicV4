@@ -57,6 +57,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -428,33 +429,53 @@ private fun VideoDetailsContent(
 
 @Composable
 private fun DetailsHeader(state: VideoDetailsState, details: YtVideoDetails, onOpenChannel: (url: String, title: String) -> Unit) {
+    var headerHeight by remember { mutableStateOf(0) }
+    var statsHeight by remember { mutableStateOf(0) }
+    var actionsHeight by remember { mutableStateOf(0) }
+    var diagnosticExpanded by remember { mutableStateOf(false) }
+    val mainFacts = details.factoids.filterNot { it.label.startsWith("DBG ") }
+    val debugFacts = details.factoids.filter { it.label.startsWith("DBG ") }
     Column(
-        Modifier.fillMaxWidth().padding(horizontal = DesignSpacing.Space16, vertical = DesignSpacing.Space8),
+        Modifier.fillMaxWidth()
+            .onSizeChanged { headerHeight = it.height }
+            .padding(horizontal = DesignSpacing.Space16, vertical = DesignSpacing.Space8),
         verticalArrangement = Arrangement.spacedBy(DesignSpacing.Space16),
     ) {
-        // YM2 diagnostic build only: expose the parsed metadata on screen so a phone
-        // screenshot can distinguish missing source facts from a broken layout.
+        // Diagnostics are kept OUT of the measured statistics row to avoid causing
+        // the very layout defect under investigation. Expand to inspect safe field shapes.
+        val diagnostics = "VIDEO " + state.videoId +
+            " | facts=" + mainFacts.size +
+            " | dateFact=" + mainFacts.any { it.label.contains("date", true) || it.label.contains("publish", true) } +
+            " | description=" + !details.description.isNullOrBlank() +
+            " | comments=" + (details.commentsContinuation != null) +
+            " | px(header/stats/actions)=" + headerHeight + "/" + statsHeight + "/" + actionsHeight +
+            "\nFACTS " + mainFacts.joinToString(" | ") { it.label + "=" + it.value } +
+            "\nFIELDS " + debugFacts.joinToString(" | ") { it.label + "=" + it.value }
         Text(
-            "DIAGNOSTIC · video=" + state.videoId +
-                " · facts=" + details.factoids.size +
-                " · date=" + details.factoids.any {
-                    val label = it.label.lowercase()
-                    label.contains("date") || label.contains("published") || label.contains("stream")
-                } +
-                " · description=" + !details.description.isNullOrBlank() +
-                " · comments=" + (details.commentsContinuation != null) +
-                "\nFacts: " + details.factoids.joinToString(" | ") { it.label + "=" + it.value },
+            "YM2 DIAG · " + mainFacts.size + " facts · date=" +
+                mainFacts.any { it.label.contains("date", true) || it.label.contains("publish", true) } +
+                " · layout px " + headerHeight + "/" + statsHeight + "/" + actionsHeight,
             style = androidx.compose.ui.text.TextStyle(fontSize = 11.sp, color = DesignColors.InkSecondary),
         )
+        Text(
+            if (diagnosticExpanded) "Hide diagnostic report" else "Show diagnostic report",
+            modifier = Modifier.clickable { diagnosticExpanded = !diagnosticExpanded },
+            style = androidx.compose.ui.text.TextStyle(fontSize = 12.sp, color = DesignColors.Accent),
+        )
+        if (diagnosticExpanded) {
+            SelectionContainer {
+                Text(diagnostics, style = androidx.compose.ui.text.TextStyle(fontSize = 11.sp, color = DesignColors.InkSecondary))
+            }
+        }
         details.title?.let {
             Text(it, style = androidx.compose.ui.text.TextStyle(fontSize = 17.sp, fontWeight = FontWeight.Bold, color = DesignColors.InkStrong))
         }
-        if (details.factoids.isNotEmpty()) {
+        if (mainFacts.isNotEmpty()) {
             // Each factoid needs a bounded share of the row. Unweighted columns can
             // measure long YouTube renderer values at near-zero width and wrap them
             // one character per line, making the entire dialog extremely tall.
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(DesignSpacing.Space8)) {
-                details.factoids.forEach { factoid ->
+            Row(Modifier.fillMaxWidth().onSizeChanged { statsHeight = it.height }, horizontalArrangement = Arrangement.spacedBy(DesignSpacing.Space8)) {
+                mainFacts.forEach { factoid ->
                     Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(
                             factoid.value,
@@ -475,7 +496,7 @@ private fun DetailsHeader(state: VideoDetailsState, details: YtVideoDetails, onO
             }
         }
         Row(
-            Modifier.fillMaxWidth(),
+            Modifier.fillMaxWidth().onSizeChanged { actionsHeight = it.height },
             horizontalArrangement = Arrangement.spacedBy(DesignSpacing.Space16),
             verticalAlignment = Alignment.CenterVertically,
         ) {
