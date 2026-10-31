@@ -5,7 +5,7 @@ import { onAccept } from "../../transport";
 import { JsEngineErrorImpl, commandHandler } from "../../protocol/command";
 import { hostLogger } from "../../protocol/logger";
 import { innertubeJson } from "./innertube";
-import { asString } from "./scan";
+import { asString, isObj, walk, textOf } from "./scan";
 import { EDIT_COMMENT, EDIT_REPLY, commentPageOf, videoDetailsOf } from "./watchParse";
 
 async function writeJson(out: PipeSink, value: object): Promise<void> {
@@ -31,9 +31,33 @@ onAccept(
       hostLogger(args, "yt/video-details"),
     );
     const details = videoDetailsOf(root);
+    // Newer /next responses may put a recent premiere date on the header
+    // instead of inside a factoidRenderer.
+    let headerDate: string | undefined;
+    walk(root, (key, node) => {
+      if (key !== "videoDescriptionHeaderRenderer" || !isObj(node)) return;
+      headerDate ??= textOf(node["publishDate"]) ?? asString(node["publishDate"]);
+      return true;
+    });
+    const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    const dateFact = (raw: string): { "value": string; "label": string } | undefined => {
+      const iso = /^(\d{4})-(\d{2})-(\d{2})(?:T|$)/.exec(raw);
+      const display = /\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d{1,2}),?\s+(\d{4})/i.exec(raw);
+      const year = iso ? Number(iso[1]) : display ? Number(display[3]) : NaN;
+      const month = iso ? Number(iso[2]) : display ? months.findIndex(m => m.toLowerCase() === display[1]?.toLowerCase()) + 1 : NaN;
+      const day = iso ? Number(iso[3]) : display ? Number(display[2]) : NaN;
+      if (!Number.isInteger(year) || !Number.isInteger(month) || !Number.isInteger(day) ||
+          month < 1 || month > 12 || day < 1 || day > 31 ||
+          new Date(Date.UTC(year, month - 1, day)).getUTCDate() !== day) return undefined;
+      return { "value": months[month - 1]! + " " + day, "label": String(year) };
+    };
+    const originalFacts = details["factoids"] ?? [];
+    const hasDate = originalFacts.some(f => /^\d{4}$/.test(f["label"]) || /date|publish|premier/i.test(f["label"]));
+    const nextDate = headerDate ? dateFact(headerDate) : undefined;
+    if (!hasDate && nextDate) details["factoids"] = [...originalFacts, nextDate];
     // Some newly published videos omit videoDescriptionHeaderRenderer entirely in /next.
     // Only in that case request /player metadata; never replace working /next facts.
-    if (!details["factoids"] || details["factoids"].length === 0) {
+    if (originalFacts.length === 0 && !nextDate) {
       try {
         const player = await innertubeJson(
           "player", { "videoId": videoId }, hostLogger(args, "yt/video-details/fallback"),
@@ -47,15 +71,8 @@ onAccept(
         const views = asString(video?.["viewCount"]);
         if (views) facts.push({ "value": Number(views).toLocaleString("en-US"), "label": "Views" });
         const published = asString(micro?.["publishDate"]) ?? asString(micro?.["uploadDate"]);
-        if (published && /^\d{4}-\d{2}-\d{2}$/.test(published)) {
-          const year = Number(published.slice(0, 4));
-          const month = Number(published.slice(5, 7));
-          const day = Number(published.slice(8, 10));
-          const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-          if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
-            facts.push({ "value": months[month - 1] + " " + day, "label": String(year) });
-          }
-        }
+        const fallbackDate = published ? dateFact(published) : undefined;
+        if (fallbackDate) facts.push(fallbackDate);
         if (facts.length > 0) details["factoids"] = facts;
       } catch {
         // A supplementary metadata request must not break details, comments, or rating.
