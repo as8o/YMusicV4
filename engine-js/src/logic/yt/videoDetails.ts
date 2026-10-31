@@ -57,7 +57,7 @@ onAccept(
     if (!hasDate && nextDate) details["factoids"] = [...originalFacts, nextDate];
     // Some newly published videos omit videoDescriptionHeaderRenderer entirely in /next.
     // Only in that case request /player metadata; never replace working /next facts.
-    if (originalFacts.length === 0 && !nextDate) {
+    if (originalFacts.length === 0) {
       try {
         const player = await innertubeJson(
           "player", { "videoId": videoId }, hostLogger(args, "yt/video-details/fallback"),
@@ -72,8 +72,8 @@ onAccept(
         if (views) facts.push({ "value": Number(views).toLocaleString("en-US"), "label": "Views" });
         const published = asString(micro?.["publishDate"]) ?? asString(micro?.["uploadDate"]);
         const fallbackDate = published ? dateFact(published) : undefined;
-        if (fallbackDate) facts.push(fallbackDate);
-        if (facts.length > 0) details["factoids"] = facts;
+        if (!nextDate && fallbackDate) facts.push(fallbackDate);
+        if (facts.length > 0) details["factoids"] = [...facts, ...(nextDate ? [nextDate] : [])];
       } catch {
         // A supplementary metadata request must not break details, comments, or rating.
       }
