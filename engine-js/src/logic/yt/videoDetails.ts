@@ -33,7 +33,7 @@ onAccept(
     const details = videoDetailsOf(root);
     // Some newly published videos omit videoDescriptionHeaderRenderer entirely in /next.
     // Only in that case request /player metadata; never replace working /next facts.
-    if (!details.factoids || details.factoids.length === 0) {
+    if (!details["factoids"] || details["factoids"].length === 0) {
       try {
         const player = await innertubeJson(
           "player", { "videoId": videoId }, hostLogger(args, "yt/video-details/fallback"),
@@ -43,11 +43,11 @@ onAccept(
         const video = player["videoDetails"] as Record<string, unknown> | undefined;
         const facts: Array<{value: string; label: string}> = [];
         // The like count comes from /next's rating controls even when headline facts are absent.
-        if (details.likeCount) facts.push({ "value": details.likeCount, "label": "Likes" });
+        if (details["likeCount"]) facts.push({ "value": details["likeCount"], "label": "Likes" });
         const views = asString(video?.["viewCount"]);
         if (views) facts.push({ "value": Number(views).toLocaleString("en-US"), "label": "Views" });
         const published = asString(micro?.["publishDate"]) ?? asString(micro?.["uploadDate"]);
-        if (published && /^\\d{4}-\\d{2}-\\d{2}$/.test(published)) {
+        if (published && /^\d{4}-\d{2}-\d{2}$/.test(published)) {
           const year = Number(published.slice(0, 4));
           const month = Number(published.slice(5, 7));
           const day = Number(published.slice(8, 10));
@@ -56,7 +56,7 @@ onAccept(
             facts.push({ "value": months[month - 1] + " " + day, "label": String(year) });
           }
         }
-        if (facts.length > 0) details.factoids = facts;
+        if (facts.length > 0) details["factoids"] = facts;
       } catch {
         // A supplementary metadata request must not break details, comments, or rating.
       }
