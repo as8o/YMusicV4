@@ -434,7 +434,9 @@ private fun DetailsHeader(state: VideoDetailsState, details: YtVideoDetails, onO
         verticalArrangement = Arrangement.spacedBy(DesignSpacing.Space16),
     ) {
         // Diagnostic builds only. This report is independent of the visible statistics.
-        details.diagnostic?.let { report ->
+        run {
+            val report = details.diagnostic ?: "Diagnostic field is absent in the engine response. This confirms that the UI is running MetaDiag, but the metadata report did not reach Kotlin. Check the packaged engine bundle / response decoder."
+
             Text(
                 if (diagnosticExpanded) "Hide metadata diagnostics" else "Show metadata diagnostics",
                 modifier = Modifier.clickable { diagnosticExpanded = !diagnosticExpanded },
