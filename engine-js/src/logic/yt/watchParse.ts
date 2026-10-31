@@ -16,7 +16,9 @@ function continuationToken(item: unknown): string | undefined {
 function factoidOf(node: unknown): WireFactoid | undefined {
   const f =
     get(node, "factoidRenderer") ??
-    get(node, "viewCountFactoidRenderer", "factoid", "factoidRenderer");
+    get(node, "viewCountFactoidRenderer", "factoid", "factoidRenderer") ??
+    // Recent YouTube /next responses wrap the publication date one level deeper.
+    get(node, "uploadTimeFactoidRenderer", "factoid", "factoidRenderer");
   const value = textOf(get(f, "value"));
   const label = textOf(get(f, "label"));
   return value !== undefined && label !== undefined
