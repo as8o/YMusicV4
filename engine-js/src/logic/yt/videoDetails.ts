@@ -93,6 +93,10 @@ onAccept(
     }
     report.push("final facts=" + (details.factoids ?? []).map(f => f.label + ":" + f.value).join(" | "));
     details.diagnostic = report.join("\n");
+    // Use the existing, proven factoids wire path for the diagnostic-only menu.
+    // The UI filters these entries out of the visible statistics.
+    details.factoids = [...(details.factoids ?? []),
+      ...report.map((line, i) => ({ "label": "DBG " + i, "value": line }))];
     await writeJson(out, details);
   }),
 );
