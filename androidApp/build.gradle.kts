@@ -42,7 +42,7 @@ base { archivesName.set("YMusic-$appVersionName") }
 
 // The ABIs every native the app needs — quickjs, mse, ffmpeg — is built for. A device on any other
 // ABI could install an APK carrying only some of them and crash at the first engine call.
-val appAbis = FfmpegBuild.ANDROID_ABIS
+val appAbis = if (providers.gradleProperty("testAbi").orNull == "arm64-v8a") listOf("arm64-v8a") else FfmpegBuild.ANDROID_ABIS
 
 android {
     namespace = "io.ymusic.android"
@@ -56,7 +56,7 @@ android {
         applicationId = if (providers.gradleProperty("aaTest").orNull == "true") "io.ymusic.android.ym2metadiag" else "io.ymusic.android"
         minSdk = Versions.minSdk
         targetSdk = Versions.targetSdk
-        versionCode = 16
+        versionCode = providers.gradleProperty("testVersionCode").orNull?.toIntOrNull() ?: 16
         versionName = appVersionName
         buildConfigField("String", "SENTRY_DSN", "\"${sentryDsn()}\"")
         buildConfigField("String", "GIT_COMMIT", "\"${gitCommit()}\"")
