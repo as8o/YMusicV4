@@ -48,7 +48,9 @@ onAccept(
         if (views) facts.push({ "value": Number(views).toLocaleString("en-US"), "label": "Views" });
         const published = asString(micro?.["publishDate"]) ?? asString(micro?.["uploadDate"]);
         if (published && /^\\d{4}-\\d{2}-\\d{2}$/.test(published)) {
-          const [year, month, day] = published.split("-").map(Number);
+          const year = Number(published.slice(0, 4));
+          const month = Number(published.slice(5, 7));
+          const day = Number(published.slice(8, 10));
           const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
           if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
             facts.push({ "value": months[month - 1] + " " + day, "label": String(year) });
