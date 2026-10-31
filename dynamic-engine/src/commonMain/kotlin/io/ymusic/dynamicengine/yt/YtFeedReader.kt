@@ -83,7 +83,6 @@ private suspend fun readPageHeader(r: JsonReader): YtPageHeader {
     r.beginObject()
     while (r.hasNextObjectKey()) {
         when (r.nextKey()) {
-            "diagnostic" -> diagnostic = r.stringOrNull()
             "title" -> title = r.stringOrNull()
             "subtitleLine1" -> subtitleLine1 = r.stringOrNull()
             "subtitleLine2" -> subtitleLine2 = r.stringOrNull()
@@ -433,6 +432,7 @@ internal suspend fun readVideoDetails(r: JsonReader): YtVideoDetails {
     r.beginObject()
     while (r.hasNextObjectKey()) {
         when (r.nextKey()) {
+            "diagnostic" -> diagnostic = r.stringOrNull()
             "title" -> title = r.stringOrNull()
             "channelTitle" -> channelTitle = r.stringOrNull()
             "channelUrl" -> channelUrl = r.stringOrNull()
