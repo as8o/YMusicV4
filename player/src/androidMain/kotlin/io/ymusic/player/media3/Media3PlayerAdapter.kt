@@ -318,7 +318,7 @@ class Media3PlayerAdapter(
 
     private companion object {
         const val TAG = "Media3PlayerAdapter"
-        const val SEEK_INCREMENT_MS = 10_000L
+        const val SEEK_INCREMENT_MS = 15_000L
 
         /** Max published timeline items — the floating window around the current item. Media3
          *  survives huge queues (ParceledListSlice chunks the platform parcel), but every
