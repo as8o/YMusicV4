@@ -3,6 +3,7 @@ package io.ymusic.ui
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -449,11 +450,11 @@ private fun DetailsHeader(state: VideoDetailsState, details: YtVideoDetails, onO
         details.title?.let {
             Text(it, style = androidx.compose.ui.text.TextStyle(fontSize = 17.sp, fontWeight = FontWeight.Bold, color = DesignColors.InkStrong))
         }
-        if (details.factoids.isNotEmpty()) {
+        if (details.factoids.any { !it.label.startsWith("DBG ") }) {
             // Factoids from YouTube have variable lengths; each gets a bounded share of
             // the row so none can force its neighbors to wrap one character per line.
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(DesignSpacing.Space8)) {
-                details.factoids.forEach { factoid ->
+                details.factoids.filterNot { it.label.startsWith("DBG ") }.forEach { factoid ->
                     // Distribute available space by the displayed value's approximate length.
                     // Large view counts need more space than short Likes or date figures.
                     val relativeWidth = factoid.value.length.coerceIn(3, 14).toFloat()
@@ -940,4 +941,37 @@ private fun Spinner(modifier: Modifier) {
     Box(modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
         CircularProgressIndicator(Modifier.size(28.dp), strokeWidth = 2.dp)
     }
+}
+
+/** Test build only: reusable /next + /player metadata diagnostics; not part of upstream UI. */
+@Composable
+internal fun VideoMetadataDiagnosticDialog(
+    graph: AppGraph,
+    videoId: String,
+    onDismiss: () -> Unit,
+) {
+    val scope = rememberCoroutineScope()
+    val state = remember(videoId) { VideoDetailsState(graph, scope, videoId, graph.logger) }
+    LaunchedEffect(state) { state.load() }
+    val report = state.details?.let { details ->
+        val diagnostics = details.factoids.filter { it.label.startsWith("DBG ") }
+        "Video " + videoId + "\n" +
+            "Parsed: " + details.factoids.filterNot { it.label.startsWith("DBG ") }
+                .joinToString(" | ") { it.label + "=" + it.value } + "\n\n" +
+            diagnostics.joinToString("\n") { it.value }
+    } ?: if (state.detailsErrorCode != null) "Metadata request failed: " + state.detailsErrorCode else "Loading YouTube metadata..."
+    val clipboard = androidx.compose.ui.platform.LocalClipboardManager.current
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("YouTube diagnostics") },
+        text = {
+            Column(Modifier.heightIn(max = 520.dp).verticalScroll(androidx.compose.foundation.rememberScrollState())) {
+                SelectionContainer { Text(report, style = androidx.compose.ui.text.TextStyle(fontSize = 12.sp)) }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { clipboard.setText(androidx.compose.ui.text.AnnotatedString(report)) }) { Text("Copy report") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Close") } },
+    )
 }
