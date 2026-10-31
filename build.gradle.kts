@@ -76,7 +76,8 @@ registerFfmpegSync(
 
 registerFfmpegSync(
     "syncFfmpegAndroid",
-    FfmpegBuild.ANDROID_ABIS.associateWith(FfmpegBuild::androidSlug),
+    (if (providers.gradleProperty("testAbi").orNull == "arm64-v8a") listOf("arm64-v8a") else FfmpegBuild.ANDROID_ABIS)
+        .associateWith(FfmpegBuild::androidSlug),
     FfmpegBuild.androidDir(project),
     "the per-ABI ffmpeg pack the apk ships as lib/<abi>/{libffmpeg.so,libav*.so}",
 )
