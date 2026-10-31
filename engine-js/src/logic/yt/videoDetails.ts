@@ -5,7 +5,7 @@ import { onAccept } from "../../transport";
 import { JsEngineErrorImpl, commandHandler } from "../../protocol/command";
 import { hostLogger } from "../../protocol/logger";
 import { innertubeJson } from "./innertube";
-import { asString } from "./scan";
+import { asString, get, isObj, textOf, walk } from "./scan";
 import { EDIT_COMMENT, EDIT_REPLY, commentPageOf, videoDetailsOf } from "./watchParse";
 
 async function writeJson(out: PipeSink, value: object): Promise<void> {
@@ -31,9 +31,34 @@ onAccept(
       hostLogger(args, "yt/video-details"),
     );
     const details = videoDetailsOf(root);
+    // Diagnostic-only, allowlisted metadata. Never serialize the /next or /player
+    // response: it contains private account identifiers and action tokens.
+    const report: string[] = ["Video " + videoId, "next factoids=" + (details.factoids?.length ?? 0)];
+    let headerCount = 0;
+    walk(root, (key, value) => {
+      if (key !== "videoDescriptionHeaderRenderer" || !isObj(value)) return;
+      headerCount++;
+      report.push("header[" + headerCount + "] keys=" + Object.keys(value).filter(k => /date|factoid|view|time/i.test(k)).join(","));
+      report.push("header publishDate=" + (textOf(value["publishDate"]) ?? asString(value["publishDate"]) ?? "(not text)"));
+      const facts = value["factoid"];
+      if (Array.isArray(facts)) facts.slice(0, 8).forEach((node, index) => {
+        if (!isObj(node)) return;
+        const kind = ["factoidRenderer", "viewCountFactoidRenderer", "uploadTimeFactoidRenderer"].find(k => node[k] !== undefined);
+        if (!kind) return;
+        const renderer = node[kind];
+        const inner = kind === "factoidRenderer" ? renderer : get(renderer, "factoid", "factoidRenderer");
+        report.push("fact[" + index + "] kind=" + kind + " keys=" + (isObj(renderer) ? Object.keys(renderer).filter(k => /factoid|date|time|upload|view|value|label/i.test(k)).join(",") : "none"));
+        report.push("fact[" + index + "] value=" + (textOf(get(inner, "value")) ?? "(missing)") + " label=" + (textOf(get(inner, "label")) ?? "(missing)"));
+      });
+      return true;
+    });
+    report.push("headers=" + headerCount);
+    report.push("next likeCount=" + (details.likeCount ?? "(missing)"));
+
     // Some newly published videos omit videoDescriptionHeaderRenderer entirely in /next.
     // Only in that case request /player metadata; never replace working /next facts.
     if (!details.factoids || details.factoids.length === 0) {
+      report.push("fallback=attempt /player");
       try {
         const player = await innertubeJson(
           "player", { "videoId": videoId }, hostLogger(args, "yt/video-details/fallback"),
@@ -41,6 +66,9 @@ onAccept(
         const micro = (player["microformat"] as Record<string, unknown> | undefined)
           ?.["playerMicroformatRenderer"] as Record<string, unknown> | undefined;
         const video = player["videoDetails"] as Record<string, unknown> | undefined;
+        report.push("player microformat keys=" + (micro ? Object.keys(micro).filter(k => /date|live|time|publish|upload/i.test(k)).join(",") : "(absent)"));
+        report.push("player viewCount=" + (asString(video?.["viewCount"]) ?? "(missing)"));
+        report.push("player publishDate=" + (asString(micro?.["publishDate"]) ?? "(missing)") + " uploadDate=" + (asString(micro?.["uploadDate"]) ?? "(missing)"));
         const facts: Array<{value: string; label: string}> = [];
         // The like count comes from /next's rating controls even when headline facts are absent.
         if (details.likeCount) facts.push({ "value": details.likeCount, "label": "Likes" });
@@ -57,10 +85,14 @@ onAccept(
           }
         }
         if (facts.length > 0) details.factoids = facts;
-      } catch {
+        report.push("fallback facts=" + facts.map(f => f.label + ":" + f.value).join(" | "));
+      } catch (error) {
+        report.push("fallback failed=" + (error instanceof Error ? error.name : "unknown"));
         // A supplementary metadata request must not break details, comments, or rating.
       }
     }
+    report.push("final facts=" + (details.factoids ?? []).map(f => f.label + ":" + f.value).join(" | "));
+    details.diagnostic = report.join("\n");
     await writeJson(out, details);
   }),
 );
