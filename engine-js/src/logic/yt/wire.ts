@@ -259,6 +259,8 @@ export interface WireFactoid {
 
 /** The watch page minus the player (yt/video-details): metadata, description, comments entry. */
 export interface WireVideoDetails {
+  /** Diagnostic build only; sanitized metadata and renderer structure. */
+  diagnostic?: string;
   title?: string;
   channelTitle?: string;
   channelUrl?: string;
