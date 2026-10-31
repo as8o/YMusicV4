@@ -69,7 +69,7 @@ onAccept(
         // The like count comes from /next's rating controls even when headline facts are absent.
         if (details["likeCount"]) facts.push({ "value": details["likeCount"], "label": "Likes" });
         const views = asString(video?.["viewCount"]);
-        if (views) facts.push({ "value": Number(views).toLocaleString("en-US"), "label": "Views" });
+        if (views) facts.push({ "value": views.replace(/\B(?=(\d{3})+(?!\d))/g, ","), "label": "Views" });
         const published = asString(micro?.["publishDate"]) ?? asString(micro?.["uploadDate"]);
         const fallbackDate = published ? dateFact(published) : undefined;
         if (!nextDate && fallbackDate) facts.push(fallbackDate);
