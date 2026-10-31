@@ -83,6 +83,7 @@ private suspend fun readPageHeader(r: JsonReader): YtPageHeader {
     r.beginObject()
     while (r.hasNextObjectKey()) {
         when (r.nextKey()) {
+            "diagnostic" -> diagnostic = r.stringOrNull()
             "title" -> title = r.stringOrNull()
             "subtitleLine1" -> subtitleLine1 = r.stringOrNull()
             "subtitleLine2" -> subtitleLine2 = r.stringOrNull()
@@ -415,6 +416,7 @@ private suspend fun readLocaleOption(r: JsonReader): YtLocaleOption {
 
 /** The `yt/video-details` result. */
 internal suspend fun readVideoDetails(r: JsonReader): YtVideoDetails {
+    var diagnostic: String? = null
     var title: String? = null
     var channelTitle: String? = null
     var channelUrl: String? = null
@@ -451,6 +453,7 @@ internal suspend fun readVideoDetails(r: JsonReader): YtVideoDetails {
     return YtVideoDetails(
         title, channelTitle, channelUrl, channelThumbs, subscribers, factoids, likeCount, likeCountLiked, likeStatus,
         rateTokens, description, commentsCount, commentsContinuation,
+        diagnostic = diagnostic,
     )
 }
 
