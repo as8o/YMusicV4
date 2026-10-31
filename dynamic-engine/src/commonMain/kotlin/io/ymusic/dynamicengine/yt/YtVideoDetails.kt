@@ -5,7 +5,6 @@ import kmpcommon.log.Logger
 
 /** The watch page minus the player (`WireVideoDetails`); every field is engine-composed display text. */
 data class YtVideoDetails(
-    val diagnostic: String? = null,
     val title: String? = null,
     val channelTitle: String? = null,
     /** Engine-composed app link to the channel page. */
@@ -25,6 +24,8 @@ data class YtVideoDetails(
     val commentsCount: String? = null,
     /** The first [extractComments] token; null = comments are off. */
     val commentsContinuation: String? = null,
+    /** Diagnostic builds only; no sensitive YouTube response fields. */
+    val diagnostic: String? = null,
 ) {
     companion object {
         const val LIKE = "LIKE"
