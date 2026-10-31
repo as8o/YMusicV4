@@ -1375,6 +1375,7 @@ private fun PlayerMoreMenu(coordinator: PlaybackCoordinator) {
     var playbackOpen by remember { mutableStateOf(false) }
     var eqOpen by remember { mutableStateOf(false) }
     var detailsOpen by remember { mutableStateOf(false) }
+    var diagnosticsOpen by remember { mutableStateOf(false) }
     val current = player.queue.collectAsState().value.currentItem
     val video = current as? PlayableItem.YtMedia
     val shareVideoId by produceState<String?>(null, current) {
@@ -1388,7 +1389,7 @@ private fun PlayerMoreMenu(coordinator: PlaybackCoordinator) {
     val scope = rememberCoroutineScope()
     var tracksOpen by remember { mutableStateOf(false) }
     val config by player.config.collectAsState()
-    HoldVideoOverlay(open || tracksOpen || playbackOpen || eqOpen || detailsOpen)
+    HoldVideoOverlay(open || tracksOpen || playbackOpen || eqOpen || detailsOpen || diagnosticsOpen)
 
     Box {
         ActionIcon(Icons.Default.MoreVert, stringResource(Res.string.cd_more), onClick = { open = true })
@@ -1460,6 +1461,13 @@ private fun PlayerMoreMenu(coordinator: PlaybackCoordinator) {
                 player.reload()
                 open = false
             }
+            if (video != null) {
+                // Test-only diagnostics. Separate popup keeps the normal details dialog unchanged.
+                MoreMenuItem(Icons.Outlined.Info, "YouTube diagnostics") {
+                    diagnosticsOpen = true
+                    open = false
+                }
+            }
         }
         DropdownMenu(expanded = tracksOpen, onDismissRequest = { tracksOpen = false }, modifier = Modifier.width(MoreMenuWidth)) {
             audioTracks.tracks.forEach { track ->
@@ -1489,6 +1497,11 @@ private fun PlayerMoreMenu(coordinator: PlaybackCoordinator) {
             video.videoId,
             onOpenChannel = { url, title -> detailsOpen = false; openChannel(url, title) },
             onDismiss = { detailsOpen = false },
+        )
+    }
+    if (diagnosticsOpen && video != null) {
+        VideoMetadataDiagnosticDialog(
+            coordinator.graph, video.videoId, onDismiss = { diagnosticsOpen = false },
         )
     }
     if (eqOpen) {
