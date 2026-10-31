@@ -33,7 +33,7 @@ onAccept(
     const details = videoDetailsOf(root);
     // Diagnostic-only, allowlisted metadata. Never serialize the /next or /player
     // response: it contains private account identifiers and action tokens.
-    const report: string[] = ["Video " + videoId, "next factoids=" + (details.factoids?.length ?? 0)];
+    const report: string[] = ["Video " + videoId, "next factoids=" + (details["factoids"]?.length ?? 0)];
     let headerCount = 0;
     walk(root, (key, value) => {
       if (key !== "videoDescriptionHeaderRenderer" || !isObj(value)) return;
@@ -53,11 +53,11 @@ onAccept(
       return true;
     });
     report.push("headers=" + headerCount);
-    report.push("next likeCount=" + (details.likeCount ?? "(missing)"));
+    report.push("next likeCount=" + (details["likeCount"] ?? "(missing)"));
 
     // Some newly published videos omit videoDescriptionHeaderRenderer entirely in /next.
     // Only in that case request /player metadata; never replace working /next facts.
-    if (!details.factoids || details.factoids.length === 0) {
+    if (!details["factoids"] || details["factoids"].length === 0) {
       report.push("fallback=attempt /player");
       try {
         const player = await innertubeJson(
@@ -71,7 +71,7 @@ onAccept(
         report.push("player publishDate=" + (asString(micro?.["publishDate"]) ?? "(missing)") + " uploadDate=" + (asString(micro?.["uploadDate"]) ?? "(missing)"));
         const facts: Array<{value: string; label: string}> = [];
         // The like count comes from /next's rating controls even when headline facts are absent.
-        if (details.likeCount) facts.push({ "value": details.likeCount, "label": "Likes" });
+        if (details["likeCount"]) facts.push({ "value": details["likeCount"], "label": "Likes" });
         const views = asString(video?.["viewCount"]);
         if (views) facts.push({ "value": Number(views).toLocaleString("en-US"), "label": "Views" });
         const published = asString(micro?.["publishDate"]) ?? asString(micro?.["uploadDate"]);
@@ -84,18 +84,18 @@ onAccept(
             facts.push({ "value": months[month - 1] + " " + day, "label": String(year) });
           }
         }
-        if (facts.length > 0) details.factoids = facts;
+        if (facts.length > 0) details["factoids"] = facts;
         report.push("fallback facts=" + facts.map(f => f.label + ":" + f.value).join(" | "));
       } catch (error) {
         report.push("fallback failed=" + (error instanceof Error ? error.name : "unknown"));
         // A supplementary metadata request must not break details, comments, or rating.
       }
     }
-    report.push("final facts=" + (details.factoids ?? []).map(f => f.label + ":" + f.value).join(" | "));
-    details.diagnostic = report.join("\n");
+    report.push("final facts=" + (details["factoids"] ?? []).map(f => f.label + ":" + f.value).join(" | "));
+    details["diagnostic"] = report.join("\n");
     // Use the existing, proven factoids wire path for the diagnostic-only menu.
     // The UI filters these entries out of the visible statistics.
-    details.factoids = [...(details.factoids ?? []),
+    details["factoids"] = [...(details["factoids"] ?? []),
       ...report.map((line, i) => ({ "label": "DBG " + i, "value": line }))];
     await writeJson(out, details);
   }),
