@@ -5,6 +5,7 @@ import kmpcommon.log.Logger
 
 /** The watch page minus the player (`WireVideoDetails`); every field is engine-composed display text. */
 data class YtVideoDetails(
+    val diagnostic: String? = null,
     val title: String? = null,
     val channelTitle: String? = null,
     /** Engine-composed app link to the channel page. */
