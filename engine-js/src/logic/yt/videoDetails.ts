@@ -85,13 +85,13 @@ onAccept(
           }
         }
         if (facts.length > 0) details["factoids"] = facts;
-        report.push("fallback facts=" + facts.map(f => f.label + ":" + f.value).join(" | "));
+        report.push("fallback facts=" + facts.map(f => f["label"] + ":" + f["value"]).join(" | "));
       } catch (error) {
         report.push("fallback failed=" + (error instanceof Error ? error.name : "unknown"));
         // A supplementary metadata request must not break details, comments, or rating.
       }
     }
-    report.push("final facts=" + (details["factoids"] ?? []).map(f => f.label + ":" + f.value).join(" | "));
+    report.push("final facts=" + (details["factoids"] ?? []).map(f => f["label"] + ":" + f["value"]).join(" | "));
     details["diagnostic"] = report.join("\n");
     // Use the existing, proven factoids wire path for the diagnostic-only menu.
     // The UI filters these entries out of the visible statistics.
