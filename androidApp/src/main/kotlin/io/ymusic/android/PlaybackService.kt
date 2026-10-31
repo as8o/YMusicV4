@@ -216,14 +216,24 @@ class PlaybackService : MediaLibraryService() {
     /** Auto shows custom actions only (a legacy controller sees no shuffle/repeat otherwise). */
     private suspend fun shuffleRepeatButtons(shuffle: Boolean, loop: LoopMode): ImmutableList<CommandButton> =
         ImmutableList.of(
+            // Explicitly keep track navigation among the preferred media buttons.
+            // The Android Auto host chooses visible versus overflow placement.
+            CommandButton.Builder(CommandButton.ICON_PREVIOUS)
+                .setDisplayName("Previous track")
+                .setPlayerCommand(androidx.media3.common.Player.COMMAND_SEEK_TO_PREVIOUS)
+                .build(),
+            CommandButton.Builder(CommandButton.ICON_NEXT)
+                .setDisplayName("Next track")
+                .setPlayerCommand(androidx.media3.common.Player.COMMAND_SEEK_TO_NEXT)
+                .build(),
             // Seek commands are already supported by Media3PlayerAdapter. Auto may show
             // these in the additional controls; the car host chooses actual placement.
-            CommandButton.Builder(CommandButton.ICON_SKIP_BACK_10)
-                .setDisplayName("Rewind 10 seconds")
+            CommandButton.Builder(CommandButton.ICON_SKIP_BACK_15)
+                .setDisplayName("Rewind 15 seconds")
                 .setPlayerCommand(androidx.media3.common.Player.COMMAND_SEEK_BACK)
                 .build(),
-            CommandButton.Builder(CommandButton.ICON_SKIP_FORWARD_10)
-                .setDisplayName("Forward 10 seconds")
+            CommandButton.Builder(CommandButton.ICON_SKIP_FORWARD_15)
+                .setDisplayName("Forward 15 seconds")
                 .setPlayerCommand(androidx.media3.common.Player.COMMAND_SEEK_FORWARD)
                 .build(),
             CommandButton.Builder(if (shuffle) CommandButton.ICON_SHUFFLE_ON else CommandButton.ICON_SHUFFLE_OFF)
@@ -463,11 +473,11 @@ class PlaybackService : MediaLibraryService() {
                     }
                     KeyEvent.ACTION_UP -> {
                         if (!steeringHeld || steeringCode != code) {
-                            // Short steering press = 10-second seek, without changing the queue.
+                            // Short steering press = 15-second seek, without changing the queue.
                             val p = this@PlaybackService.player
                             if (p != null && p.queue.value.currentItem != null) {
                                 val position = p.progress.value.positionMs
-                                p.seekTo((position + if (code == KeyEvent.KEYCODE_MEDIA_NEXT) 10_000L else -10_000L).coerceAtLeast(0L))
+                                p.seekTo((position + if (code == KeyEvent.KEYCODE_MEDIA_NEXT) 15_000L else -15_000L).coerceAtLeast(0L))
                             }
                         }
                         steeringHeld = false
