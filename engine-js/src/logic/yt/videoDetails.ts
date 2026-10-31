@@ -30,7 +30,36 @@ onAccept(
       { "videoId": videoId },
       hostLogger(args, "yt/video-details"),
     );
-    await writeJson(out, videoDetailsOf(root));
+    const details = videoDetailsOf(root);
+    // Some newly published videos omit videoDescriptionHeaderRenderer entirely in /next.
+    // Only in that case request /player metadata; never replace working /next facts.
+    if (!details.factoids || details.factoids.length === 0) {
+      try {
+        const player = await innertubeJson(
+          "player", { "videoId": videoId }, hostLogger(args, "yt/video-details/fallback"),
+        );
+        const micro = (player["microformat"] as Record<string, unknown> | undefined)
+          ?.["playerMicroformatRenderer"] as Record<string, unknown> | undefined;
+        const video = player["videoDetails"] as Record<string, unknown> | undefined;
+        const facts: Array<{value: string; label: string}> = [];
+        // The like count comes from /next's rating controls even when headline facts are absent.
+        if (details.likeCount) facts.push({ "value": details.likeCount, "label": "Likes" });
+        const views = asString(video?.["viewCount"]);
+        if (views) facts.push({ "value": Number(views).toLocaleString("en-US"), "label": "Views" });
+        const published = asString(micro?.["publishDate"]) ?? asString(micro?.["uploadDate"]);
+        if (published && /^\\d{4}-\\d{2}-\\d{2}$/.test(published)) {
+          const [year, month, day] = published.split("-").map(Number);
+          const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+          if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+            facts.push({ "value": months[month - 1] + " " + day, "label": String(year) });
+          }
+        }
+        if (facts.length > 0) details.factoids = facts;
+      } catch {
+        // A supplementary metadata request must not break details, comments, or rating.
+      }
+    }
+    await writeJson(out, details);
   }),
 );
 
