@@ -428,10 +428,22 @@ private fun VideoDetailsContent(
 
 @Composable
 private fun DetailsHeader(state: VideoDetailsState, details: YtVideoDetails, onOpenChannel: (url: String, title: String) -> Unit) {
+    var diagnosticExpanded by remember(state.videoId) { mutableStateOf(false) }
     Column(
         Modifier.fillMaxWidth().padding(horizontal = DesignSpacing.Space16, vertical = DesignSpacing.Space8),
         verticalArrangement = Arrangement.spacedBy(DesignSpacing.Space16),
     ) {
+        // Diagnostic builds only. This report is independent of the visible statistics.
+        details.diagnostic?.let { report ->
+            Text(
+                if (diagnosticExpanded) "Hide metadata diagnostics" else "Show metadata diagnostics",
+                modifier = Modifier.clickable { diagnosticExpanded = !diagnosticExpanded },
+                style = androidx.compose.ui.text.TextStyle(fontSize = 12.sp, color = DesignColors.Accent),
+            )
+            if (diagnosticExpanded) SelectionContainer {
+                Text(report, style = androidx.compose.ui.text.TextStyle(fontSize = 11.sp, color = DesignColors.InkSecondary))
+            }
+        }
         details.title?.let {
             Text(it, style = androidx.compose.ui.text.TextStyle(fontSize = 17.sp, fontWeight = FontWeight.Bold, color = DesignColors.InkStrong))
         }
