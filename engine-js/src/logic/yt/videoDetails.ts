@@ -75,7 +75,7 @@ onAccept(
         const views = asString(video?.["viewCount"]);
         if (views) facts.push({ "value": Number(views).toLocaleString("en-US"), "label": "Views" });
         const published = asString(micro?.["publishDate"]) ?? asString(micro?.["uploadDate"]);
-        if (published && /^\\d{4}-\\d{2}-\\d{2}$/.test(published)) {
+        if (published && /^\d{4}-\d{2}-\d{2}$/.test(published)) {
           const year = Number(published.slice(0, 4));
           const month = Number(published.slice(5, 7));
           const day = Number(published.slice(8, 10));
