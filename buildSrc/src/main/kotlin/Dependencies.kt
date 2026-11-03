@@ -14,7 +14,9 @@ object Versions {
     /** The scrape bundle's (engine.js) self-declared revision — BUMP MANUALLY on every remote push of
      *  it. Feeds its inlined BACKEND_VERSION, its embedded-const version and each shell's
      *  ENGINE_JS_VERSION. A remote engine.js applies only above the embedded revision. */
-    const val engineJsVersion = 89L
+    // YM has its own engine implementation; keep its version above upstream remote
+    // revisions so the bundled parser isn't silently replaced by a different build.
+    const val engineJsVersion = 1_000_089L
 
     /** The MSE player bundle's (player.js) revision — independent of [engineJsVersion]; BUMP
      *  MANUALLY on every remote push of it. Feeds its inlined BACKEND_VERSION and PLAYER_JS_VERSION. */
