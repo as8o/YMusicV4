@@ -327,13 +327,13 @@ compose.desktop {
         }
         nativeDistributions {
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
-            packageName = "YMusic"
+            packageName = "YM"
             packageVersion = desktopVersion
             description = "Music player"
             vendor = "YMusic"
             macOS {
                 // Stable across releases: the updater and Gatekeeper both identify the app by it.
-                bundleID = "io.ymusic.desktop"
+                bundleID = "io.ymusic.ym.desktop"
                 minimumSystemVersion = Versions.macosMin
                 // The rounded-square dock tile; the runtime Taskbar icon (dev runs) is the same
                 // artwork from src/jvmMain/resources/ymusic_dock.png. macOS 26+ draws the
@@ -348,9 +348,9 @@ compose.desktop {
                         <array>
                             <dict>
                                 <key>CFBundleURLName</key>
-                                <string>io.ymusic.desktop</string>
+                                <string>io.ymusic.ym.desktop</string>
                                 <key>CFBundleURLSchemes</key>
-                                <array><string>ymusic</string></array>
+                                <array><string>ym</string></array>
                             </dict>
                         </array>
                     """.trimIndent()
@@ -378,7 +378,7 @@ compose.desktop {
             windows {
                 // Fixed for the app's lifetime: a new MSI with the same upgrade code replaces the
                 // installed one instead of installing beside it. Per-machine, under Program Files.
-                upgradeUuid = "6f3c2b9e-4d1a-4e8b-9a57-2c1f0d8e7b34"
+                upgradeUuid = "c06de08f-4db1-4c81-a6b5-6d1a8f57b33b"
                 perUserInstall = false
                 menu = true
                 shortcut = true
