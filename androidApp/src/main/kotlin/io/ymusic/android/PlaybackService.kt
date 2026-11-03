@@ -152,6 +152,9 @@ class PlaybackService : MediaLibraryService() {
             // instead of media3's DataSource loader, which knows neither art:// nor our caches.
             // CacheBitmapLoader memoizes the current artwork; our loader stays out of the LRU.
             .setBitmapLoader(CacheBitmapLoader(bitmapLoader))
+            // Android Auto may reset Queue scrolling on periodic position updates.
+            // See https://github.com/androidx/media/issues/2192
+            .setPeriodicPositionUpdateEnabled(false)
             .build()
         // The graph is normally long built when playback starts this service (await returns
         // inline); the cold path initializes async — onStartCommand's placeholder covers the
