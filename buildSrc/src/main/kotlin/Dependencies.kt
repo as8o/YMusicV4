@@ -16,7 +16,7 @@ object Versions {
      *  ENGINE_JS_VERSION. A remote engine.js applies only above the embedded revision. */
     // YM has its own engine implementation; keep its version above upstream remote
     // revisions so the bundled parser isn't silently replaced by a different build.
-    const val engineJsVersion = 1_000_089L
+    const val engineJsVersion = 1000089L
 
     /** The MSE player bundle's (player.js) revision — independent of [engineJsVersion]; BUMP
      *  MANUALLY on every remote push of it. Feeds its inlined BACKEND_VERSION and PLAYER_JS_VERSION. */
