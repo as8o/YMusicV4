@@ -567,7 +567,7 @@ val packageReleaseInnoSetup by tasks.registering(Exec::class) {
 
     val script = project.file("installer/windows/ymusic.iss")
     val iconFile = project.file("ymusic.ico")
-    val appDir = layout.buildDirectory.dir("compose/binaries/main-release/app/YMusic")
+    val appDir = layout.buildDirectory.dir("compose/binaries/main-release/app/YM")
 
     inputs.file(script)
     inputs.file(iconFile)
@@ -582,13 +582,13 @@ val packageReleaseInnoSetup by tasks.registering(Exec::class) {
             isccPath.get().absolutePath,
             "/Qp",
             "/DAppVersion=$desktopVersion",
-            "/DAppPublisher=YMusic",
+            "/DAppPublisher=YM",
             "/DAppURL=https://ymusic.io",
             "/DAppSourceDir=${appDir.get().asFile.absolutePath}",
             "/DIconFile=${iconFile.absolutePath}",
             "/DOutputDir=${out.absolutePath}",
             "/DArch=${if (hostArm64) "arm64" else "x64compatible"}",
-            "/DOutputBaseName=YMusic-Setup-$desktopVersion-$hostPlatform",
+            "/DOutputBaseName=YM-Setup-$desktopVersion-$hostPlatform",
             script.absolutePath,
         )
     }
