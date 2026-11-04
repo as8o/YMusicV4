@@ -2,16 +2,16 @@
 ; passes the version, paths and arch as ISCC /D defines.
 ;
 ; Build input (jpackage's `createReleaseDistributable` output):
-;   AppSourceDir = desktopApp/build/compose/binaries/main-release/app/YMusic
-;     containing YMusic.exe + runtime/ + app/
+;   AppSourceDir = desktopApp/build/compose/binaries/main-release/app/YM
+;     containing YM.exe + runtime/ + app/
 ;
 ; Output:
 ;   OutputDir/OutputBaseFilename.exe (self-contained installer, LZMA2)
 
-#define AppName "YMusic"
-#define AppExeName "YMusic.exe"
-; Never change: Inno finds the previous install by AppId, so a new one would install side by side.
-#define AppId "{{6F3C2B9E-4D1A-4E8B-9A57-2C1F0D8E7B34}"
+#define AppName "YM"
+#define AppExeName "YM.exe"
+; Separate YM AppId from upstream YMusic, stable across all future YM upgrades.
+#define AppId "{{C06DE08F-4DB1-4C81-A6B5-6D1A8F57B33B}"
 
 [Setup]
 AppId={#AppId}
