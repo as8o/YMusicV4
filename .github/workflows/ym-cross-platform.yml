@@ -85,7 +85,22 @@ jobs:
       - if: steps.cache.outputs.cache-hit != 'true' && startsWith(matrix.slug, 'android-')
         name: Install NDK
         run: |
-          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install "ndk;$NDK_VERSION" > /dev/null
+          # sdkmanager occasionally receives an incomplete NDK ZIP on GitHub-hosted runners.
+          # Retry only the download, keeping all other FFmpeg jobs and their caches unchanged.
+          installed=false
+          for attempt in 1 2 3; do
+            if yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install "ndk;$NDK_VERSION" > /dev/null; then
+              installed=true
+              break
+            fi
+            echo "::warning::NDK install attempt $attempt failed; retrying"
+            rm -rf "$ANDROID_HOME/ndk/$NDK_VERSION"
+            sleep $((attempt * 10))
+          done
+          if [ "$installed" != true ] || [ ! -f "$ANDROID_HOME/ndk/$NDK_VERSION/source.properties" ]; then
+            echo "::error::Unable to install NDK $NDK_VERSION after 3 attempts"
+            exit 1
+          fi
           echo "ANDROID_NDK_ROOT=$ANDROID_HOME/ndk/$NDK_VERSION" >> "$GITHUB_ENV"
 
       - if: steps.cache.outputs.cache-hit != 'true' && startsWith(matrix.slug, 'android-')
@@ -186,7 +201,22 @@ jobs:
       # The ffmpeg packs' NDK, for :quickjs and :mse's CMake builds (they honor ANDROID_NDK_ROOT).
       - name: Install NDK
         run: |
-          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install "ndk;$NDK_VERSION" > /dev/null
+          # sdkmanager occasionally receives an incomplete NDK ZIP on GitHub-hosted runners.
+          # Retry only the download, keeping all other FFmpeg jobs and their caches unchanged.
+          installed=false
+          for attempt in 1 2 3; do
+            if yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install "ndk;$NDK_VERSION" > /dev/null; then
+              installed=true
+              break
+            fi
+            echo "::warning::NDK install attempt $attempt failed; retrying"
+            rm -rf "$ANDROID_HOME/ndk/$NDK_VERSION"
+            sleep $((attempt * 10))
+          done
+          if [ "$installed" != true ] || [ ! -f "$ANDROID_HOME/ndk/$NDK_VERSION/source.properties" ]; then
+            echo "::error::Unable to install NDK $NDK_VERSION after 3 attempts"
+            exit 1
+          fi
           echo "ANDROID_NDK_ROOT=$ANDROID_HOME/ndk/$NDK_VERSION" >> "$GITHUB_ENV"
 
       # secrets.enc → secrets.properties + signing/. Without SECRETS_PASSPHRASE the build runs on
