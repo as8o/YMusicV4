@@ -442,7 +442,8 @@ private fun DetailsHeader(state: VideoDetailsState, details: YtVideoDetails, onO
         if (details.factoids.isNotEmpty()) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(DesignSpacing.Space8)) {
                 details.factoids.forEach { factoid ->
-                    Column(Modifier.weight(1f).semantics(mergeDescendants = true) {}, horizontalAlignment = Alignment.CenterHorizontally) {
+                    val relativeWidth = factoid.value.length.coerceIn(3, 14).toFloat()
+                    Column(Modifier.weight(relativeWidth).semantics(mergeDescendants = true) {}, horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(
                             factoid.value,
                             style = androidx.compose.ui.text.TextStyle(fontSize = 16.sp, fontWeight = FontWeight.Bold, color = DesignColors.Ink, textAlign = TextAlign.Center),
@@ -461,24 +462,22 @@ private fun DetailsHeader(state: VideoDetailsState, details: YtVideoDetails, onO
                 }
             }
         }
-        Row(
-            Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(DesignSpacing.Space16),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
+        // Keep the channel and action controls in separate rows. On narrow phones the
+        // fixed-width rating/share controls otherwise leave the channel text nearly zero
+        // width, which produces hundreds of pixels of vertical wrapping.
+        Column(verticalArrangement = Arrangement.spacedBy(DesignSpacing.Space8)) {
             val name = details.channelTitle
             val url = details.channelUrl
-            Row(
-                Modifier
-                    .weight(1f)
-                    .clip(RoundedCornerShape(8.dp))
-                    .then(if (name != null && url != null) Modifier.clickable { onOpenChannel(url, name) } else Modifier),
-                horizontalArrangement = Arrangement.spacedBy(DesignSpacing.Space16),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                if (name != null) {
+            if (name != null) {
+                Row(
+                    Modifier.fillMaxWidth()
+                        .clip(RoundedCornerShape(8.dp))
+                        .then(if (url != null) Modifier.clickable { onOpenChannel(url, name) } else Modifier),
+                    horizontalArrangement = Arrangement.spacedBy(DesignSpacing.Space16),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
                     Avatar(details.channelThumbs, 40.dp)
-                    Column {
+                    Column(Modifier.weight(1f)) {
                         Text(
                             name,
                             style = androidx.compose.ui.text.TextStyle(fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = DesignColors.Ink),
