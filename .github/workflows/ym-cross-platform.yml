@@ -264,10 +264,28 @@ jobs:
           test -n "$ORIGINAL" && test -n "$CURRENT" || { echo "::error::missing original/current ARM64 APK"; exit 1; }
           "$APKSIGNER" verify --verbose --print-certs "$CURRENT" > "$RUNNER_TEMP/ym-current-cert.txt"
           "$APKSIGNER" verify --verbose --print-certs "$ORIGINAL" > "$RUNNER_TEMP/ym-original-cert.txt"
-          digest() { sed -n 's/^Signer #1 certificate SHA-256 digest: //p' "$1" | head -n 1; }
+          # apksigner output varies by build-tools release (prefix, spacing and line endings).
+          # Match the certificate field rather than relying on a fixed full-line prefix.
+          digest() {
+            awk '
+              tolower($0) ~ /certificate sha-256 digest:/ {
+                sub(/^.*[Dd]igest:[[:space:]]*/, "")
+                gsub(/[[:space:]]/, "")
+                print tolower($0)
+                exit
+              }
+            ' "$1"
+          }
           EXPECTED="$(digest "$RUNNER_TEMP/ym-original-cert.txt")"
           ACTUAL="$(digest "$RUNNER_TEMP/ym-current-cert.txt")"
-          test -n "$EXPECTED" && test -n "$ACTUAL" || { echo "::error::cannot extract signer certificate digest"; exit 1; }
+          if [[ ! "$EXPECTED" =~ ^[[:xdigit:]]{64}$ || ! "$ACTUAL" =~ ^[[:xdigit:]]{64}$ ]]; then
+            echo "::error::Cannot extract 64-character signer SHA-256 certificate digest"
+            echo "Original APK certificate info:"
+            grep -i 'certificate' "$RUNNER_TEMP/ym-original-cert.txt" || true
+            echo "Current APK certificate info:"
+            grep -i 'certificate' "$RUNNER_TEMP/ym-current-cert.txt" || true
+            exit 1
+          fi
           echo "Checkpoint certificate SHA-256: $EXPECTED"
           echo "New build certificate SHA-256:   $ACTUAL"
           test "$EXPECTED" = "$ACTUAL" || { echo "::error::YM signing identity changed; upgrade would fail"; exit 1; }
