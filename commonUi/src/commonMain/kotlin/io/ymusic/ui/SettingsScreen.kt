@@ -222,6 +222,26 @@ fun SettingsScreen(graph: AppGraph, signedIn: Boolean = false, onLogin: () -> Un
         }
         SettingsSection(Res.string.settings_debug) {
             ToggleRow(graph, AppSettings.showFps, Res.string.settings_show_fps, Res.string.settings_show_fps_hint)
+            if (graph.exportAaDiagnosticLogs != null) {
+                var exportStatus by remember { mutableStateOf("Save to Downloads, then attach the .gz file to ChatGPT.") }
+                Column(
+                    Modifier.fillMaxWidth().clickable {
+                        scope.launch {
+                            exportStatus = "Opening Android file picker…"
+                            exportStatus = try {
+                                if (graph.exportAaDiagnosticLogs.invoke()) "Log saved to the selected folder."
+                                else "Save canceled."
+                            } catch (e: Exception) {
+                                graph.logger?.fork("aa-diagnostic-export")?.log(Logger.Level.WARN, "export failed", e)
+                                "Export failed: ${e.message ?: "unknown error"}"
+                            }
+                        }
+                    }.padding(horizontal = DesignSpacing.SettingsRowHorizontal, vertical = DesignSpacing.SettingsRowVertical),
+                ) {
+                    Text("Save AA diagnostic log", style = TextStyle(fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = DesignColors.Ink))
+                    Text(exportStatus, style = TextStyle(fontSize = 12.sp, color = DesignColors.InkSecondary))
+                }
+            }
         }
     }
 }
