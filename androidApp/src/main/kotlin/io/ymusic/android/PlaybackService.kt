@@ -148,6 +148,8 @@ class PlaybackService : MediaLibraryService() {
             stale.releaseSession()
         }
         sessionOwner = this
+        log?.fork("aa-routing")?.log(Logger.Level.INFO,
+            "SERVICE_CREATE package=$packageName component=${PlaybackService::class.java.name} processPid=${android.os.Process.myPid()} sessionOrdinal=${sessionCount + 1}")
         session = MediaLibrarySession.Builder(this, pending, LibraryCallback())
             .setId("playback-${++sessionCount}")
             .setSessionActivity(sessionActivityIntent)
@@ -488,7 +490,10 @@ class PlaybackService : MediaLibraryService() {
         override fun onConnectAsync(
             session: MediaSession,
             controller: MediaSession.ControllerInfo,
-        ): ListenableFuture<MediaSession.ConnectionResult> = Futures.immediateFuture(
+        ): ListenableFuture<MediaSession.ConnectionResult> {
+            log?.fork("aa-routing")?.log(Logger.Level.INFO,
+                "CONNECT controller=${controller.packageName} uid=${controller.uid} servicePackage=$packageName sessionId=${session.id}")
+            return Futures.immediateFuture(
             MediaSession.ConnectionResult.AcceptedResultBuilder(session, controller)
                 .setAvailablePlayerCommands(MediaSession.ConnectionResult.DEFAULT_PLAYER_COMMANDS)
                 .setAvailableSessionCommands(
@@ -499,7 +504,8 @@ class PlaybackService : MediaLibraryService() {
                         .build(),
                 )
                 .build(),
-        )
+            )
+        }
 
         override fun onCustomCommand(
             session: MediaSession,
@@ -583,7 +589,10 @@ class PlaybackService : MediaLibraryService() {
         ): ListenableFuture<LibraryResult<MediaItem>> =
             // Must be already done: the legacy onGetRoot blocks the main thread until this resolves,
             // and its completion callback is posted to that same main thread — a pending future deadlocks.
-            Futures.immediateFuture(LibraryResult.ofItem(MediaBrowseTree.ROOT_ITEM, params))
+            Futures.immediateFuture(LibraryResult.ofItem(MediaBrowseTree.ROOT_ITEM, params)).also {
+                log?.fork("aa-routing")?.log(Logger.Level.INFO,
+                    "GET_ROOT controller=${browser.packageName} uid=${browser.uid} service=$packageName")
+            }
 
         override fun onPlayerCommandRequest(
             session: MediaSession,
@@ -604,7 +613,10 @@ class PlaybackService : MediaLibraryService() {
             params: LibraryParams?,
         ): ListenableFuture<LibraryResult<ImmutableList<MediaItem>>> = future {
             val tree = browseTree() ?: return@future LibraryResult.ofError(LibraryResult.RESULT_ERROR_UNKNOWN)
-            LibraryResult.ofItemList(ImmutableList.copyOf(tree.children(parentId, page, pageSize)), params)
+            val children = tree.children(parentId, page, pageSize)
+            log?.fork("aa-routing")?.log(Logger.Level.INFO,
+                "GET_CHILDREN controller=${browser.packageName} parent=$parentId page=$page size=${children.size} ids=${children.take(6).joinToString { it.mediaId }}")
+            LibraryResult.ofItemList(ImmutableList.copyOf(children), params)
         }
 
         override fun onGetItem(
@@ -612,6 +624,8 @@ class PlaybackService : MediaLibraryService() {
             browser: MediaSession.ControllerInfo,
             mediaId: String,
         ): ListenableFuture<LibraryResult<MediaItem>> = future {
+            log?.fork("aa-routing")?.log(Logger.Level.INFO,
+                "GET_ITEM controller=${browser.packageName} id=$mediaId service=$packageName")
             browseTree()?.item(mediaId)?.let { LibraryResult.ofItem(it, null) }
                 ?: LibraryResult.ofError(LibraryResult.RESULT_ERROR_BAD_VALUE)
         }
@@ -767,7 +781,11 @@ class PlaybackService : MediaLibraryService() {
         stopSelf()
     }
 
-    override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaLibrarySession? = session
+    override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaLibrarySession? {
+        log?.fork("aa-routing")?.log(Logger.Level.INFO,
+            "GET_SESSION controller=${controllerInfo.packageName} uid=${controllerInfo.uid} service=$packageName sessionId=${session?.id}")
+        return session
+    }
 
     // media3's own check reads its notification manager's foreground flag, which this service's own
     // notification never sets, so it would stop playback on every swipe-away. VoiceSearchActivity's
