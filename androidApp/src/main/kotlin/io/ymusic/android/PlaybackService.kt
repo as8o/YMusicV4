@@ -223,7 +223,7 @@ class PlaybackService : MediaLibraryService() {
                 val browsed = tree?.ytItem(video.videoId)
                 val title = browsed?.title?.takeIf { it.isNotBlank() && it != video.videoId }
                 if (title != null) {
-                    recoveredVideoMetadata[video.videoId] = title to browsed.channelTitle
+                    recoveredVideoMetadata[video.videoId] = title to browsed?.channelTitle
                     videoMetadataChanged.tryEmit(Unit)
                     return@collectLatest
                 }
