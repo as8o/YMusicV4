@@ -1,8 +1,13 @@
-name: YM 4.0.17 cross-platform validation
+name: YM Android validation (desktop optional)
 
 # YM only: validates multi-architecture packages without modifying upstream-mirror master.
 on:
   workflow_dispatch:
+    inputs:
+      build_desktop:
+        description: "Also build Windows, macOS and Linux packages"
+        type: boolean
+        default: false
   push:
     branches: ['ym/main']
 
@@ -58,6 +63,9 @@ jobs:
               mingw-w64-clang-aarch64-toolchain mingw-w64-clang-aarch64-pkgconf
               mingw-w64-clang-aarch64-meson mingw-w64-clang-aarch64-ninja
               mingw-w64-clang-aarch64-zlib
+        # Only four Android FFmpeg targets on normal push/manual builds.
+        # A manual workflow_dispatch with build_desktop=true enables the six desktop targets.
+        exclude: ${{ fromJSON((github.event_name == 'workflow_dispatch' && inputs.build_desktop) && '[]' || '[{"slug":"macos-arm64"},{"slug":"macos-x86_64"},{"slug":"linux-x86_64"},{"slug":"linux-arm64"},{"slug":"windows-x86_64"},{"slug":"windows-arm64"}]') }}
     steps:
       # The Windows runner checks out with CRLF, which breaks every shell script ffmpeg-build runs.
       - if: startsWith(matrix.slug, 'windows-')
@@ -333,6 +341,7 @@ jobs:
           if-no-files-found: error
 
   macos:
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.build_desktop }}
     name: macos ${{ matrix.slug }}
     needs: ffmpeg
     runs-on: ${{ matrix.runner }}
@@ -475,6 +484,7 @@ jobs:
 
   # The Inno Setup installer (YMusic-Setup-<version>-<platform>.exe), unsigned.
   windows:
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.build_desktop }}
     name: windows ${{ matrix.slug }}
     needs: ffmpeg
     runs-on: ${{ matrix.runner }}
@@ -581,6 +591,7 @@ jobs:
 
   # The Debian package, unsigned.
   linux:
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.build_desktop }}
     name: linux ${{ matrix.slug }}
     needs: ffmpeg
     runs-on: ${{ matrix.runner }}
