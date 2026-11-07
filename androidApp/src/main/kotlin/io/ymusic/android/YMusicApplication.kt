@@ -768,6 +768,19 @@ class YMusicApplication : Application() {
             },
             downloads = downloadService,
             captureFeedbackReport = captureFeedbackReportAction.takeIf { BuildConfig.SENTRY_DSN.isNotEmpty() },
+            exportAaDiagnosticLogs = {
+                // The app already supports Android's system "Save as" picker. No storage permission
+                // or ADB is needed; the diagnostic log remains private until the user exports it.
+                val destination = documentCreator?.invoke("YM-AA-metadata-diagnostic.log.gz", "application/gzip")
+                    ?: return@AppGraph false
+                val archived = File(cacheDir, "ym-aa-metadata-diagnostic.log.gz")
+                withContext(Dispatchers.IO) {
+                    logStore.exportGzip(FileSystem.SYSTEM, archived.toOkioPath())
+                    contentResolver.openOutputStream(destination, "wt")?.use { output ->
+                        archived.inputStream().use { input -> input.copyTo(output) }
+                    } != null
+                }
+            },
             platformInfo = listOfNotNull("Android ${android.os.Build.VERSION.RELEASE}", android.os.Build.SUPPORTED_ABIS.firstOrNull()).joinToString(" · "),
             createDocument = { name, mimeType ->
                 documentCreator?.invoke(name, mimeType)?.let { uri ->
