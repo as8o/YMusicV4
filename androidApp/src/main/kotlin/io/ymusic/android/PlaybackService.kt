@@ -236,22 +236,24 @@ class PlaybackService : MediaLibraryService() {
             return ImmutableList.of(shuffleButton, closeButton)
         }
         return ImmutableList.of(
-            // Preferred button order; Android Auto decides visible vs overflow placement.
-            CommandButton.Builder(CommandButton.ICON_PREVIOUS)
-                .setDisplayName("Previous track")
-                .setPlayerCommand(androidx.media3.common.Player.COMMAND_SEEK_TO_PREVIOUS)
-                .build(),
-            CommandButton.Builder(CommandButton.ICON_SKIP_BACK_15)
-                .setDisplayName("Rewind 15 seconds")
+            // Android Auto on a split-screen head unit may show only the first two
+            // custom actions. Prefer rewind and next track in those slots.
+            // Other controls remain available if the host offers more actions.
+            CommandButton.Builder(CommandButton.ICON_SKIP_BACK_10)
+                .setDisplayName("Rewind 10 seconds")
                 .setPlayerCommand(androidx.media3.common.Player.COMMAND_SEEK_BACK)
-                .build(),
-            CommandButton.Builder(CommandButton.ICON_SKIP_FORWARD_15)
-                .setDisplayName("Forward 15 seconds")
-                .setPlayerCommand(androidx.media3.common.Player.COMMAND_SEEK_FORWARD)
                 .build(),
             CommandButton.Builder(CommandButton.ICON_NEXT)
                 .setDisplayName("Next track")
                 .setPlayerCommand(androidx.media3.common.Player.COMMAND_SEEK_TO_NEXT)
+                .build(),
+            CommandButton.Builder(CommandButton.ICON_PREVIOUS)
+                .setDisplayName("Previous track")
+                .setPlayerCommand(androidx.media3.common.Player.COMMAND_SEEK_TO_PREVIOUS)
+                .build(),
+            CommandButton.Builder(CommandButton.ICON_SKIP_FORWARD_10)
+                .setDisplayName("Forward 10 seconds")
+                .setPlayerCommand(androidx.media3.common.Player.COMMAND_SEEK_FORWARD)
                 .build(),
             shuffleButton,
             CommandButton.Builder(
