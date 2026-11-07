@@ -24,6 +24,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.content.IntentCompat
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
+import androidx.media3.common.Player as Media3Player
 import androidx.media3.common.util.BitmapLoader
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.session.CacheBitmapLoader
@@ -198,7 +199,31 @@ class PlaybackService : MediaLibraryService() {
                 sessionArtworkLimit(),
             )
         }
+        // Diagnostics only: observe public Media3 player without altering playback.
+        adapter.addListener(object : Media3Player.Listener {
+            override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
+                log?.fork("aa-handoff")?.log(Logger.Level.INFO,
+                    "MEDIA3_TRANSITION reason=$reason id=${mediaItem?.mediaId} title=${mediaItem?.mediaMetadata?.title} index=${adapter.currentMediaItemIndex}")
+            }
+            override fun onEvents(mediaPlayer: Media3Player, events: Media3Player.Events) {
+                val item = mediaPlayer.currentMediaItem
+                log?.fork("aa-handoff")?.log(Logger.Level.INFO,
+                    "MEDIA3_EVENTS events=$events id=${item?.mediaId} title=${item?.mediaMetadata?.title} playing=${mediaPlayer.isPlaying} state=${mediaPlayer.playbackState} playWhenReady=${mediaPlayer.playWhenReady} count=${mediaPlayer.mediaItemCount}")
+            }
+        })
         session?.player = adapter
+        serviceScope.launch {
+            player.queue.collect { queue ->
+                val current = queue.currentItem
+                log?.fork("aa-handoff")?.log(Logger.Level.INFO,
+                    "APP_QUEUE size=${queue.items.size} current=${(current as? PlayableItem.YtMedia)?.videoId} title=${current?.displayTitle}")
+            }
+        }
+        serviceScope.launch {
+            player.status.map { it.state }.distinctUntilChanged().collect { state ->
+                log?.fork("aa-handoff")?.log(Logger.Level.INFO, "ENGINE_STATE $state")
+            }
+        }
         serviceScope.launch {
             player.queue.map { it.currentItem }.distinctUntilChanged().collect { item ->
                 val video = item as? PlayableItem.YtMedia ?: return@collect
@@ -348,6 +373,8 @@ class PlaybackService : MediaLibraryService() {
         val coordinator = this.coordinator ?: return
         val chosen = items.getOrNull(startIndex) ?: items.firstOrNull() ?: return
         val id = chosen.mediaId
+        log?.fork("aa-handoff")?.log(Logger.Level.INFO,
+            "APPLY_BROWSE index=$startIndex id=$id title=${chosen.mediaMetadata.title} count=${items.size} before=${(player?.queue?.value?.currentItem as? PlayableItem.YtMedia)?.videoId}")
         log?.fork("aa-metadata")?.log(Logger.Level.INFO,
             "SELECT id=$id controllerTitle=${chosen.mediaMetadata.title} controllerArtist=${chosen.mediaMetadata.artist} count=${items.size}")
         when {
@@ -557,6 +584,16 @@ class PlaybackService : MediaLibraryService() {
             // and its completion callback is posted to that same main thread — a pending future deadlocks.
             Futures.immediateFuture(LibraryResult.ofItem(MediaBrowseTree.ROOT_ITEM, params))
 
+        override fun onPlayerCommandRequest(
+            session: MediaSession,
+            controller: MediaSession.ControllerInfo,
+            playerCommand: Int,
+        ): Int {
+            log?.fork("aa-handoff")?.log(Logger.Level.INFO,
+                "PLAYER_COMMAND command=$playerCommand controller=${controller.packageName} current=${(player?.queue?.value?.currentItem as? PlayableItem.YtMedia)?.videoId}")
+            return super.onPlayerCommandRequest(session, controller, playerCommand)
+        }
+
         override fun onGetChildren(
             session: MediaLibrarySession,
             browser: MediaSession.ControllerInfo,
@@ -615,6 +652,8 @@ class PlaybackService : MediaLibraryService() {
             controller: MediaSession.ControllerInfo,
             mediaItems: MutableList<MediaItem>,
         ): ListenableFuture<MutableList<MediaItem>> = future {
+            log?.fork("aa-handoff")?.log(Logger.Level.INFO,
+                "ADD_MEDIA_ITEMS controller=${controller.packageName} items=${mediaItems.joinToString(limit = 8) { "${it.mediaId}:${it.mediaMetadata.title}" }}")
             if (mediaItems.singleOrNull()?.requestMetadata?.searchQuery != null) return@future mediaItems
             val tree = browseTree() ?: return@future mediaItems
             mediaItems.map { original ->
