@@ -258,7 +258,7 @@ jobs:
           set -euo pipefail
           APKSIGNER="$(find "$ANDROID_HOME/build-tools" -maxdepth 2 -type f -name apksigner | sort -V | tail -n 1)"
           test -n "$APKSIGNER" || { echo "::error::apksigner unavailable"; exit 1; }
-          gh run download 41778273330 --repo "$GITHUB_REPOSITORY" -n YM-android-apks -D "$RUNNER_TEMP/ym-checkpoint"
+          gh release download ym-checkpoint-v4.0.15-2026-11-07 --repo "$GITHUB_REPOSITORY" --pattern "*arm64-v8a-release.apk" --dir "$RUNNER_TEMP/ym-checkpoint"
           ORIGINAL="$(find "$RUNNER_TEMP/ym-checkpoint" -name '*arm64-v8a-release.apk' -print -quit)"
           CURRENT="$(find androidApp/build/outputs/apk/release -name '*arm64-v8a-release.apk' -print -quit)"
           test -n "$ORIGINAL" && test -n "$CURRENT" || { echo "::error::missing original/current ARM64 APK"; exit 1; }
@@ -271,12 +271,6 @@ jobs:
           echo "Checkpoint certificate SHA-256: $EXPECTED"
           echo "New build certificate SHA-256:   $ACTUAL"
           test "$EXPECTED" = "$ACTUAL" || { echo "::error::YM signing identity changed; upgrade would fail"; exit 1; }
-          python3 - <<'PY'
-          import glob, re, sys, zipfile
-          def version_code(apk):
-              # Android manifest code verification is handled by aapt in the following shell step.
-              return apk
-          PY
           AAPT="$(find "$ANDROID_HOME/build-tools" -maxdepth 2 -type f -name aapt | sort -V | tail -n 1)"
           test -n "$AAPT" || { echo "::error::aapt unavailable"; exit 1; }
           old_code="$("$AAPT" dump badging "$ORIGINAL" | sed -n "s/.*versionCode='\\([0-9]*\\)'.*/\\1/p" | head -n 1)"
