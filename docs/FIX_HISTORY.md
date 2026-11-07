@@ -7,7 +7,8 @@ This document tracks the current YM patch set and links to historical *immutable
 | Fix | Purpose | Current upstream-relative branch |
 | --- | --- | --- |
 | Android Auto Queue stability | Disable periodic MediaSession position notifications that can reset scroll position in the car queue; Media3 timeline/queue retains other behavior. | [`fix/aa-queue-scroll`](https://github.com/as8o/YMusicV4/compare/master...fix/aa-queue-scroll) |
-| Android Auto steering and seeking | On Toyota RAV4: short Next/Previous = ±15s, two separate clicks = ±30s, long press = skip track; expose 15s and track controls to AA host while preserving original headset and playback controls. No low-level Fermata-style key state machine. | [`fix/aa-steering-seek`](https://github.com/as8o/YMusicV4/compare/master...fix/aa-steering-seek) |
+| Android Auto steering and seeking | On Toyota RAV4: short Next/Previous = ±10s, two separate clicks = ±20s, long press = skip track; expose 10s and track controls to AA host while preserving original headset and playback controls. No low-level Fermata-style key state machine. | [`fix/aa-steering-seek`](https://github.com/as8o/YMusicV4/compare/master...fix/aa-steering-seek) |
+| Android Auto account playlists | Show a full signed-in saved-playlist feed, including playlists owned by others, and allow navigation through continuation pages. The upstream account-library overview only contains preview shelves. | [`fix/aa-account-playlists`](https://github.com/as8o/YMusicV4/compare/master...fix/aa-account-playlists) |
 | YM branding/compatibility | Blue launcher, Android display name YM, `io.ymusic.android.ym`, original YM signing credentials, increasing version code; Windows/macOS/Linux packaging from upstream. | [Daily-use delta](https://github.com/as8o/YMusicV4/compare/master...ym/main) |
 
 ## Historic custom implementations (superseded upstream)
@@ -35,6 +36,6 @@ All of these were implemented against earlier upstream code; old approaches are 
 - Android all supported ABIs; macOS x64/arm64; Windows x64/arm64; Linux x64/arm64.
 - Signed APK `apksigner verify` matches checkpoint APK certificate SHA-256 digest.
 - Version code must be strictly greater than the installed checkpoint APK.
-- Android Auto playlist context, queue-scroll persistence, short/double/long steering presses, on-screen controls, pause/resume and headset buttons.
+- Android Auto playlist context, queue-scroll persistence, short/double/long steering presses, on-screen rewind 10s and next track, pause/resume and headset buttons.
 - Recent YouTube video publish date/statistics and S25 dialog layout.
 - Actual device validation must be reported separately from CI compilation; CI alone does not prove Toyota RAV4 behavior.
