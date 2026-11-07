@@ -1,0 +1,93 @@
+name: Publish YM v4.0.15 recovery checkpoint
+on:
+  push:
+    branches: [ops/publish-ym-v4.0.15-checkpoint]
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  checkpoint:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Tag immutable YM source
+        env:
+          TAG: ym-checkpoint-v4.0.15-2026-11-07
+          SOURCE_SHA: a6a0ab2be1992f3bac03b571621ed115506ec625
+        run: |
+          set -euo pipefail
+          git config user.name 'YM checkpoint automation'
+          git config user.email '97856956+as8o@users.noreply.github.com'
+          git cat-file -e "$SOURCE_SHA^{commit}"
+          if git ls-remote --tags origin "refs/tags/$TAG" | grep -q .; then
+            echo "Tag $TAG already exists; will not move it"
+          else
+            git tag -a "$TAG" "$SOURCE_SHA" -m 'YM checkpoint 2026-11-07 | based on upstream YMusic V4 v4.0.15 | source a6a0ab2 | last successful build 9483f09'
+            git push origin "refs/tags/$TAG"
+          fi
+      - name: Retrieve previously successful release packages
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh run download 41778273330 -R "$GITHUB_REPOSITORY" -D artifacts
+          test -d artifacts/YM-android-apks
+          mkdir -p release
+          while IFS= read -r -d '' file; do
+            group="$(basename "$(dirname "$file")")"
+            name="$(basename "$file")"
+            cp "$file" "release/YM-4.0.15-2026-11-07-${group}-${name}"
+          done < <(find artifacts -type f -print0)
+          (cd release && sha256sum * > SHA256SUMS)
+          ls -lh release
+      - name: Prepare archival notes
+        run: |
+          cat > RELEASE.md <<'NOTES'
+          # YM checkpoint — November 7, 2026 (upstream YMusic 4.0.15)
+
+          **Purpose:** permanent rollback/reference before rebasing the daily-use YM fork onto newer upstream versions.
+
+          - Exact checkpoint source: `a6a0ab2be1992f3bac03b571621ed115506ec625`
+          - Base upstream YMusic 4.0.15 commit: `429315de65f3660dc9414dcc787418a20897a7d0`
+          - Last successfully built source: `9483f09d52fc1ee50528ceb9209aa5b666652fa0`
+          - Successful GitHub Actions build: https://github.com/as8o/YMusicV4/actions/runs/41778273330
+          - Difference between checkpoint source and packaged build: only the CI workflow trigger settings.
+          - Android package: `io.ymusic.android.ym`; app name **YM**, with the custom blue Android icon.
+          - APKs and desktop packages attached below are from the **successful build commit**, not a rebuild of the source checkpoint. They are retained for recovery.
+          - SHA256SUMS validates the attached package files.
+
+          ## Historical fixes and immutable comparison references
+
+          1. **Android Auto playlist-context playback (later superseded upstream).** Selecting a video in an Android Auto YouTube playlist queues the playlist instead of starting video radio. Original patch:
+             https://github.com/as8o/YMusicV4/compare/d0147e0826abdc991c61841513eaee7de57a0948...b6987fe623611428cba2ce27a285100a4c3a01bc
+             Archived branch: `archive/android-auto-playlist-context-clean-before-upstream-2026-11`.
+          2. **Android Auto Queue scroll stability (still needed at checkpoint).** Stop periodic position updates from resetting the car queue scroll position. Original isolated patch:
+             https://github.com/as8o/YMusicV4/compare/d0147e0826abdc991c61841513eaee7de57a0948...39924b858e87e5da9098209b6757aaa916b1ce09
+             Archived branch: `archive/android-auto-queue-scroll-fix-before-upstream-2026-11`.
+          3. **Video Details dates, statistics and narrow-screen layout (later superseded upstream).** Recover missing date/stats from YouTube metadata fallbacks; prevent channel/share layout wrapping. Original isolated patch:
+             https://github.com/as8o/YMusicV4/compare/d0147e0826abdc991c61841513eaee7de57a0948...5cd6317626cd156c61240b693ca552544f1689c6
+             Archived branch: `archive/video-details-display-date-clean-before-upstream-2026-11`.
+          4. **Android Auto steering-wheel and seek controls (still needed at checkpoint).** Short Next/Previous presses seek 15s (two presses 30s), long presses change track, 15s on-screen seek commands, preserved track controls. Isolated v4.0.15 patch:
+             https://github.com/as8o/YMusicV4/compare/429315de65f3660dc9414dcc787418a20897a7d0...f766286b95195db67c3ca1cfe7f594a9e004bfae
+             Branch: `pr/android-auto-steering-seek-clean`.
+          5. **YM packaging/identity.** Stable independent Android application ID, blue icon, renamed desktop installers, preserved release signing and all-architecture build workflow. All applied alongside the fixes in this checkpoint source:
+             https://github.com/as8o/YMusicV4/compare/429315de65f3660dc9414dcc787418a20897a7d0...a6a0ab2be1992f3bac03b571621ed115506ec625
+
+          ## Forward maintenance policy
+
+          Maintain `master` as an exact upstream mirror; `ym/main` as the independently signed daily-use fork. Accept upstream solutions to old bugs rather than reapplying obsolete patches. Preserve historical fixes in `archive/` and immutable checkpoints. Test a new YM APK before replacing the daily-use installation.
+          NOTES
+      - name: Publish release with archived packages
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ym-checkpoint-v4.0.15-2026-11-07
+        run: |
+          set -euo pipefail
+          if gh release view "$TAG" -R "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "Checkpoint release already exists, not overwriting existing files"
+          else
+            gh release create "$TAG" release/* -R "$GITHUB_REPOSITORY" --title "YM checkpoint 2026-11-07 (upstream YMusic 4.0.15)" --notes-file RELEASE.md --latest=false
+          fi
