@@ -39,6 +39,7 @@ import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
 import com.google.common.util.concurrent.SettableFuture
+import io.ymusic.dynamicengine.yt.extractVideoDetails
 import io.ymusic.player.LoopMode
 import io.ymusic.player.PlayableItem
 import io.ymusic.player.PlaybackState
@@ -73,6 +74,7 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import org.jetbrains.compose.resources.getString
@@ -130,6 +132,15 @@ class PlaybackService : MediaLibraryService() {
     )
     private val searchResults = HashMap<String, List<MediaItem>>() // guarded by itself
 
+    // A /next radio item or restored controller item occasionally carries only its YouTube ID.
+    // Keep recovered display metadata in the Android Auto session, without replacing the upstream
+    // queue item or interrupting playback. Main-thread only, bounded like the browse tree cache.
+    private val recoveredVideoMetadata = object : LinkedHashMap<String, Pair<String, String?>>(64, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Pair<String, String?>>?) =
+            size > 128
+    }
+    private val videoMetadataChanged = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+
     override fun onCreate() {
         super.onCreate()
         log = (application as YMusicApplication).rootLogger.fork("playback-service")
@@ -173,12 +184,22 @@ class PlaybackService : MediaLibraryService() {
         playAgain = graph.playHistory?.playAgain
         val adapter = Media3PlayerAdapter(
             player,
-            describe = { item -> item.toMediaMetadata(this) },
+            describe = { item ->
+                val missingTitle = item is PlayableItem.YtMedia &&
+                    (item.title.isNullOrBlank() || item.title == item.videoId)
+                val recovered = if (missingTitle) {
+                    val video = item as PlayableItem.YtMedia
+                    recoveredVideoMetadata[video.videoId] ?: tree?.ytItem(video.videoId)?.let {
+                        it.title.takeIf(String::isNotBlank)?.let { title -> title to it.channelTitle }
+                    }
+                } else null
+                item.toMediaMetadata(this, recovered?.first, recovered?.second)
+            },
             logger = log,
             applyMediaItems = { _, items, startIndex, _ -> applyBrowseItems(items, startIndex) },
             insertMediaItems = { target, index, items -> insertBrowseItems(target, index, items) },
             errorMessage = { error -> errorText?.takeIf { it.first === error }?.second },
-            extraInvalidations = errorTextChanged,
+            extraInvalidations = merge(errorTextChanged, videoMetadataChanged),
         )
         bitmapLoader.delegate = graph.imageLoader?.let {
             ImageLoaderBitmapLoader(
@@ -191,6 +212,35 @@ class PlaybackService : MediaLibraryService() {
         session?.player = adapter
         pendingPlayer?.release()
         pendingPlayer = null
+        serviceScope.launch {
+            // Only an incomplete *current* YouTube item needs a detail lookup. The selected
+            // browse item normally supplies its own title; this is for cache misses and radio
+            // continuations that supply a video ID but no display metadata.
+            player.queue.map { it.currentItem }.distinctUntilChanged().collectLatest { current ->
+                val video = current as? PlayableItem.YtMedia ?: return@collectLatest
+                if (!video.title.isNullOrBlank() && video.title != video.videoId) return@collectLatest
+                if (recoveredVideoMetadata.containsKey(video.videoId)) return@collectLatest
+                val browsed = tree?.ytItem(video.videoId)
+                val title = browsed?.title?.takeIf { it.isNotBlank() && it != video.videoId }
+                if (title != null) {
+                    recoveredVideoMetadata[video.videoId] = title to browsed.channelTitle
+                    videoMetadataChanged.tryEmit(Unit)
+                    return@collectLatest
+                }
+                val details = try {
+                    graph.engines.extractVideoDetails(video.videoId)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    log?.fork("auto-video-title")?.log(Logger.Level.WARN, "video title lookup failed", e)
+                    return@collectLatest
+                }
+                val resolved = details.title?.takeIf { it.isNotBlank() && it != video.videoId }
+                    ?: return@collectLatest
+                recoveredVideoMetadata[video.videoId] = resolved to details.channelTitle
+                videoMetadataChanged.tryEmit(Unit)
+            }
+        }
         serviceScope.launch {
             player.status.map { (it.state as? PlaybackState.Error)?.error }.distinctUntilChanged().collect { error ->
                 errorText = error?.let { it to playerErrorMessage(it) }
@@ -984,10 +1034,14 @@ class PlaybackService : MediaLibraryService() {
 /** Session/notification metadata for a queue item — items are self-describing. The artworkUri is
  *  published in [artworkContentUri]-wrapped form: Android Auto resolves queue icons only from
  *  local content uris (via [ArtworkProvider]); in-process, [ImageLoaderBitmapLoader] unwraps it. */
-private fun PlayableItem.toMediaMetadata(context: android.content.Context): MediaMetadata {
+private fun PlayableItem.toMediaMetadata(
+    context: android.content.Context,
+    titleOverride: String? = null,
+    artistOverride: String? = null,
+): MediaMetadata {
     val builder = MediaMetadata.Builder()
-        .setTitle(displayTitle)
-        .setArtist(displaySubtitle)
+        .setTitle(titleOverride ?: displayTitle)
+        .setArtist(artistOverride ?: displaySubtitle)
     // A YouTube item exposes the stable mqdefault url derived from its video id — feed thumb
     // urls carry rotating signature params and expire inside long-lived session uris. Local
     // items already carry the stable art://pic/<id>.
