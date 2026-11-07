@@ -189,6 +189,13 @@ class PlaybackService : MediaLibraryService() {
             )
         }
         session?.player = adapter
+        serviceScope.launch {
+            player.queue.map { it.currentItem }.distinctUntilChanged().collect { item ->
+                val video = item as? PlayableItem.YtMedia ?: return@collect
+                log?.fork("aa-metadata")?.log(Logger.Level.INFO,
+                    "QUEUE videoId=${video.videoId} title=${video.title} displayTitle=${video.displayTitle} artist=${video.artist}")
+            }
+        }
         pendingPlayer?.release()
         pendingPlayer = null
         serviceScope.launch {
@@ -311,14 +318,19 @@ class PlaybackService : MediaLibraryService() {
 
     /** The browsed feed item behind [videoId]; a cache miss (process died since browsing) still plays
      *  from the id and the controller's metadata. */
-    private fun browsedVideo(tree: MediaBrowseTree, videoId: String, chosen: MediaItem) =
-        tree.ytItem(videoId) ?: io.ymusic.dynamicengine.yt.YtFeedItem(
+    private fun browsedVideo(tree: MediaBrowseTree, videoId: String, chosen: MediaItem): io.ymusic.dynamicengine.yt.YtFeedItem {
+        val cached = tree.ytItem(videoId)
+        val result = cached ?: io.ymusic.dynamicengine.yt.YtFeedItem(
             kind = io.ymusic.dynamicengine.yt.YtFeedItem.KIND_VIDEO,
             id = videoId,
             title = chosen.mediaMetadata.title?.toString() ?: videoId,
             subtitleLine1 = chosen.mediaMetadata.artist?.toString(),
             channelTitle = chosen.mediaMetadata.artist?.toString(),
         )
+        log?.fork("aa-metadata")?.log(Logger.Level.INFO,
+            "CHOSEN videoId=$videoId cacheHit=${cached != null} controllerTitle=${chosen.mediaMetadata.title} resolvedTitle=${result.title}")
+        return result
+    }
 
     /** A controller's setMediaItems (Auto browse/search tap), applied with phone-app semantics. */
     private fun applyBrowseItems(items: List<MediaItem>, startIndex: Int) {
@@ -326,6 +338,8 @@ class PlaybackService : MediaLibraryService() {
         val coordinator = this.coordinator ?: return
         val chosen = items.getOrNull(startIndex) ?: items.firstOrNull() ?: return
         val id = chosen.mediaId
+        log?.fork("aa-metadata")?.log(Logger.Level.INFO,
+            "SELECT id=$id controllerTitle=${chosen.mediaMetadata.title} controllerArtist=${chosen.mediaMetadata.artist} count=${items.size}")
         when {
             // A voice request: no id, the words in requestMetadata (see onAddMediaItems).
             id.isEmpty() -> playFromVoice(chosen.requestMetadata.searchQuery, chosen.requestMetadata.extras)
@@ -593,7 +607,12 @@ class PlaybackService : MediaLibraryService() {
         ): ListenableFuture<MutableList<MediaItem>> = future {
             if (mediaItems.singleOrNull()?.requestMetadata?.searchQuery != null) return@future mediaItems
             val tree = browseTree() ?: return@future mediaItems
-            mediaItems.map { tree.item(it.mediaId) ?: it }.toMutableList()
+            mediaItems.map { original ->
+                val cached = tree.item(original.mediaId)
+                log?.fork("aa-metadata")?.log(Logger.Level.INFO,
+                    "RESOLVE id=${original.mediaId} incomingTitle=${original.mediaMetadata.title} cached=${cached != null} cachedTitle=${cached?.mediaMetadata?.title}")
+                cached ?: original
+            }.toMutableList()
         }
 
         /** "Play" with nothing queued (steering-wheel button, Auto's play on a fresh process):
