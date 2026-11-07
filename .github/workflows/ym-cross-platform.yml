@@ -36,36 +36,8 @@ jobs:
     runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: false
-      matrix:
-        include:
-          - { slug: android-armeabi-v7a, runner: ubuntu-24.04 }
-          - { slug: android-arm64-v8a, runner: ubuntu-24.04 }
-          - { slug: android-x86, runner: ubuntu-24.04 }
-          - { slug: android-x86_64, runner: ubuntu-24.04 }
-          - { slug: macos-arm64, runner: macos-15 }
-          - { slug: macos-x86_64, runner: macos-15-intel }
-          - { slug: linux-x86_64, runner: ubuntu-24.04 }
-          - { slug: linux-arm64, runner: ubuntu-24.04-arm }
-          # Native under MSYS2, as on a developer machine. CLANGARM64 has no gcc: HOST_CC is
-          # ffmpeg's compiler, which its configure otherwise assumes is gcc.
-          - slug: windows-x86_64
-            runner: windows-2022
-            msystem: MINGW64
-            cc: gcc
-            packages: >-
-              mingw-w64-x86_64-toolchain mingw-w64-x86_64-nasm mingw-w64-x86_64-pkgconf
-              mingw-w64-x86_64-meson mingw-w64-x86_64-ninja mingw-w64-x86_64-zlib
-          - slug: windows-arm64
-            runner: windows-11-arm
-            msystem: CLANGARM64
-            cc: clang
-            packages: >-
-              mingw-w64-clang-aarch64-toolchain mingw-w64-clang-aarch64-pkgconf
-              mingw-w64-clang-aarch64-meson mingw-w64-clang-aarch64-ninja
-              mingw-w64-clang-aarch64-zlib
-        # Only four Android FFmpeg targets on normal push/manual builds.
-        # A manual workflow_dispatch with build_desktop=true enables the six desktop targets.
-        exclude: ${{ fromJSON((github.event_name == 'workflow_dispatch' && inputs.build_desktop) && '[]' || '[{"slug":"macos-arm64"},{"slug":"macos-x86_64"},{"slug":"linux-x86_64"},{"slug":"linux-arm64"},{"slug":"windows-x86_64"},{"slug":"windows-arm64"}]') }}
+      # Select an Android-only matrix on ordinary pushes; retain desktop as a manual option.
+      matrix: ${{ fromJSON((github.event_name == 'workflow_dispatch' && inputs.build_desktop) && '{"include":[{"slug":"android-armeabi-v7a","runner":"ubuntu-24.04"},{"slug":"android-arm64-v8a","runner":"ubuntu-24.04"},{"slug":"android-x86","runner":"ubuntu-24.04"},{"slug":"android-x86_64","runner":"ubuntu-24.04"},{"slug":"macos-arm64","runner":"macos-15"},{"slug":"macos-x86_64","runner":"macos-15-intel"},{"slug":"linux-x86_64","runner":"ubuntu-24.04"},{"slug":"linux-arm64","runner":"ubuntu-24.04-arm"},{"slug":"windows-x86_64","runner":"windows-2022","msystem":"MINGW64","cc":"gcc","packages":"mingw-w64-x86_64-toolchain mingw-w64-x86_64-nasm mingw-w64-x86_64-pkgconf mingw-w64-x86_64-meson mingw-w64-x86_64-ninja mingw-w64-x86_64-zlib"},{"slug":"windows-arm64","runner":"windows-11-arm","msystem":"CLANGARM64","cc":"clang","packages":"mingw-w64-clang-aarch64-toolchain mingw-w64-clang-aarch64-pkgconf mingw-w64-clang-aarch64-meson mingw-w64-clang-aarch64-ninja mingw-w64-clang-aarch64-zlib"}]}' || '{"include":[{"slug":"android-armeabi-v7a","runner":"ubuntu-24.04"},{"slug":"android-arm64-v8a","runner":"ubuntu-24.04"},{"slug":"android-x86","runner":"ubuntu-24.04"},{"slug":"android-x86_64","runner":"ubuntu-24.04"}]}') }}
     steps:
       # The Windows runner checks out with CRLF, which breaks every shell script ffmpeg-build runs.
       - if: startsWith(matrix.slug, 'windows-')
