@@ -319,6 +319,10 @@ class MediaBrowseTree(private val context: Context, private val graph: AppGraph)
     @Synchronized
     private fun remember(item: YtFeedItem) {
         ytItems[item.id] = item
+        graph.logger?.fork("aa-metadata")?.log(
+            kmpcommon.log.Logger.Level.INFO,
+            "BROWSE videoId=${item.id} title=${item.title.take(130)}",
+        )
     }
 
     private fun YtFeedItem.toMediaItem(groupTitle: String?, listUrl: String? = null): MediaItem {
