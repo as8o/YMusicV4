@@ -1,4 +1,4 @@
-name: YM Android validation (desktop optional)
+name: YM Android AA metadata diagnostics
 
 # YM only: validates multi-architecture packages without modifying upstream-mirror master.
 on:
@@ -9,7 +9,7 @@ on:
         type: boolean
         default: false
   push:
-    branches: ['ym/main']
+    branches: ['diagnostics/aa-video-title-2026-11-07']
 
 permissions:
   contents: read
