@@ -497,11 +497,11 @@ class PlaybackService : MediaLibraryService() {
                     }
                     KeyEvent.ACTION_UP -> {
                         if (!steeringHeld || steeringCode != code) {
-                            // Short steering press = 15-second seek, without changing the queue.
+                            // Short steering press = 10-second seek, without changing the queue.
                             val p = this@PlaybackService.player
                             if (p != null && p.queue.value.currentItem != null) {
                                 val position = p.progress.value.positionMs
-                                p.seekTo((position + if (code == KeyEvent.KEYCODE_MEDIA_NEXT) 15_000L else -15_000L).coerceAtLeast(0L))
+                                p.seekTo((position + if (code == KeyEvent.KEYCODE_MEDIA_NEXT) 10_000L else -10_000L).coerceAtLeast(0L))
                             }
                         }
                         steeringHeld = false
