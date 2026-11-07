@@ -173,7 +173,17 @@ class PlaybackService : MediaLibraryService() {
         playAgain = graph.playHistory?.playAgain
         val adapter = Media3PlayerAdapter(
             player,
-            describe = { item -> item.toMediaMetadata(this) },
+            describe = { item ->
+                if (item is PlayableItem.YtMedia &&
+                    item.videoId == (player.queue.value.currentItem as? PlayableItem.YtMedia)?.videoId
+                ) {
+                    log?.fork("aa-metadata")?.log(
+                        Logger.Level.INFO,
+                        "PUBLISH videoId=${item.videoId} title=${item.displayTitle} artist=${item.displaySubtitle}",
+                    )
+                }
+                item.toMediaMetadata(this)
+            },
             logger = log,
             applyMediaItems = { _, items, startIndex, _ -> applyBrowseItems(items, startIndex) },
             insertMediaItems = { target, index, items -> insertBrowseItems(target, index, items) },
