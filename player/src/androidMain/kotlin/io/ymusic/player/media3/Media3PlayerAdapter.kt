@@ -232,8 +232,13 @@ class Media3PlayerAdapter(
     override fun handleSeek(mediaItemIndex: Int, positionMs: Long, seekCommand: Int): ListenableFuture<*> = done {
         when (seekCommand) {
             Media3Player.COMMAND_SEEK_TO_NEXT, Media3Player.COMMAND_SEEK_TO_NEXT_MEDIA_ITEM -> player.skipNext()
-            Media3Player.COMMAND_SEEK_TO_PREVIOUS, Media3Player.COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM ->
+            Media3Player.COMMAND_SEEK_TO_PREVIOUS, Media3Player.COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM -> {
+                // The upstream facade's smart Previous may restart this same item at 0.
+                // With periodic session updates disabled for AA queue-scroll stability, ensure
+                // Media3 re-anchors its position even when the current item has not changed.
                 player.skipPrev()
+                invalidateState()
+            }
             Media3Player.COMMAND_SEEK_TO_MEDIA_ITEM -> {
                 val absolute = toAbsolute(mediaItemIndex)
                 if (absolute != C.INDEX_UNSET && absolute != player.queue.value.currentIndex) {
