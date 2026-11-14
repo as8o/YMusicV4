@@ -2,20 +2,20 @@
 ; passes the version, paths and arch as ISCC /D defines.
 ;
 ; Build input (jpackage's `createReleaseDistributable` output):
-;   AppSourceDir = desktopApp/build/compose/binaries/main-release/app/YMusic
-;     containing YMusic.exe + runtime/ + app/
+;   AppSourceDir = desktopApp/build/compose/binaries/main-release/app/YM
+;     containing YM.exe + runtime/ + app/
 ;
 ; Output:
 ;   OutputDir/OutputBaseFilename.exe (self-contained installer, LZMA2)
 
-#define AppName "YMusic"
-#define AppExeName "YMusic.exe"
-#define MediaProgId "YMusic.Media"
+#define AppName "YM"
+#define AppExeName "YM.exe"
+#define MediaProgId "YM.Media"
 ; The app's AppUserModelID (WindowsAppId.ID): the media flyout and taskbar find the app's name and
 ; icon through the shortcut carrying it, and a pin only merges with the running window when they match.
-#define AppUserModelId "io.ymusic.windows"
-; Never change: Inno finds the previous install by AppId, so a new one would install side by side.
-#define AppId "{{6F3C2B9E-4D1A-4E8B-9A57-2C1F0D8E7B34}"
+#define AppUserModelId "io.ymusic.ym.windows"
+; YM has its own stable AppId, isolated from upstream YMusic installers.
+#define AppId "{{C06DE08F-4DB1-4C81-A6B5-6D1A8F57B33B}"
 
 [Setup]
 AppId={#AppId}

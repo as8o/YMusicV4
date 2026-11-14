@@ -10,7 +10,7 @@ import kmpcommon.log.Logger
  * Windows resolves the app's name and icon (taskbar, media flyout) through the shortcut with this ID.
  */
 internal object WindowsAppId {
-    const val ID = "io.ymusic.windows"
+    const val ID = "io.ymusic.ym.windows"
 
     /** Must run before any window or jump list exists: they take the process's ID from then on. */
     fun claim(log: Logger) {
