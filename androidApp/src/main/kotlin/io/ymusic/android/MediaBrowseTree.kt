@@ -34,6 +34,7 @@ import io.ymusic.ui.resources.library_tab_playlists
 import io.ymusic.ui.resources.library_tab_songs
 import io.ymusic.ui.resources.playlist_recent_play
 import io.ymusic.ui.resources.playlist_top_tracks
+import io.ymusic.ui.resources.show_more
 import io.ymusic.ui.resources.section_discover
 import io.ymusic.ui.resources.section_library
 import io.ymusic.ui.resources.section_yt_music
@@ -124,6 +125,9 @@ class MediaBrowseTree(private val context: Context, private val graph: AppGraph)
             }
             // The nav links are the app's own (same as the phone's AccountLibraryScreen).
             parentId == DISC_ACCOUNT -> listOf(
+                // The account library is a shelf preview. Its Playlists 'View all' CTA
+                // is not rendered by Android Auto, so expose the full saved-playlist feed.
+                browsable(ACCOUNT_PLAYLISTS, getString(Res.string.library_tab_playlists)),
                 browsable(YT_FEED_PREFIX + "/feed/history", getString(Res.string.account_watch_history)),
                 browsable(YT_LIST_PREFIX + "/playlist?list=WL", getString(Res.string.account_watch_later)),
                 browsable(YT_LIST_PREFIX + "/playlist?list=LL", getString(Res.string.account_liked_videos)),
@@ -145,6 +149,9 @@ class MediaBrowseTree(private val context: Context, private val graph: AppGraph)
             parentId == YTM_EXPLORE -> feedChildren(graph.engines.extractMusicExplore())
             parentId == YTM_NEW -> feedChildren(graph.engines.extractMusicNewReleases())
             parentId == YTM_CHARTS -> feedChildren(graph.engines.extractMusicCharts())
+            parentId == ACCOUNT_PLAYLISTS -> accountPlaylists()
+            parentId.startsWith(ACCOUNT_PLAYLISTS_MORE_PREFIX) ->
+                accountPlaylists(parentId.removePrefix(ACCOUNT_PLAYLISTS_MORE_PREFIX))
             parentId.startsWith(YT_LIST_PREFIX) -> {
                 val url = parentId.removePrefix(YT_LIST_PREFIX)
                 feedChildren(ytList(url).also { lastYtList = url to it }, listUrl = url)
@@ -273,6 +280,19 @@ class MediaBrowseTree(private val context: Context, private val graph: AppGraph)
 
     /** Shelves flattened into one list: videos playable, playlists/albums browsable, each tagged
      *  with its shelf title as a group heading; channels and nav tags have no Auto surface. */
+    /** Unlike the library overview, /feed/playlists includes saved playlists owned by others.
+     *  The engine provides continuation tokens; expose each additional page as a browsable
+     *  item instead of fetching an unbounded number of pages on the car UI thread. */
+    private suspend fun accountPlaylists(continuation: String? = null): List<MediaItem> {
+        val feed = graph.engines.extractChannelDetail("/feed/playlists", continuation)
+        return buildList {
+            addAll(feedChildren(feed))
+            feed.continuation?.takeIf { it.isNotBlank() }?.let { token ->
+                add(browsable(ACCOUNT_PLAYLISTS_MORE_PREFIX + token, getString(Res.string.show_more)))
+            }
+        }
+    }
+
     private fun feedChildren(feed: YtFeedPage, listUrl: String? = null): List<MediaItem> = feed.sections.flatMap { section ->
         val group = section.header?.title
         section.items.mapNotNull { item ->
@@ -386,6 +406,9 @@ class MediaBrowseTree(private val context: Context, private val graph: AppGraph)
 
         /** Browsable engine feed page (`/feed/…` app link, verbatim): `ytfeed:<link>`. */
         const val YT_FEED_PREFIX = "ytfeed:"
+        /** The complete signed-in YouTube playlist collection (not local playlists). */
+        private const val ACCOUNT_PLAYLISTS = YT_FEED_PREFIX + "/feed/playlists"
+        private const val ACCOUNT_PLAYLISTS_MORE_PREFIX = "ytplmore:"
 
         /** Playable local song: `song:<containerId>/<rowId>` — the container is the play context. */
         const val LOCAL_SONG_PREFIX = "song:"
