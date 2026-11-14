@@ -238,6 +238,25 @@ class PlaybackService : MediaLibraryService() {
             return ImmutableList.of(shuffleButton, closeButton)
         }
         return ImmutableList.of(
+            // Android Auto on a split-screen head unit may show only the first two
+            // custom actions. Prefer rewind and next track in those slots.
+            // Other controls remain available if the host offers more actions.
+            CommandButton.Builder(CommandButton.ICON_SKIP_BACK_10)
+                .setDisplayName("Rewind 10 seconds")
+                .setPlayerCommand(androidx.media3.common.Player.COMMAND_SEEK_BACK)
+                .build(),
+            CommandButton.Builder(CommandButton.ICON_NEXT)
+                .setDisplayName("Next track")
+                .setPlayerCommand(androidx.media3.common.Player.COMMAND_SEEK_TO_NEXT)
+                .build(),
+            CommandButton.Builder(CommandButton.ICON_PREVIOUS)
+                .setDisplayName("Previous track")
+                .setPlayerCommand(androidx.media3.common.Player.COMMAND_SEEK_TO_PREVIOUS)
+                .build(),
+            CommandButton.Builder(CommandButton.ICON_SKIP_FORWARD_10)
+                .setDisplayName("Forward 10 seconds")
+                .setPlayerCommand(androidx.media3.common.Player.COMMAND_SEEK_FORWARD)
+                .build(),
             shuffleButton,
             CommandButton.Builder(
                 when (loop) {
@@ -463,12 +482,48 @@ class PlaybackService : MediaLibraryService() {
             return Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
         }
 
+        // Experimental: some Android Auto head units send only a Next/Previous command,
+        // not raw DOWN/UP/long-press events. Intercept only events actually delivered.
+        private var steeringHeld = false
+        private var steeringCode = 0
+
         override fun onMediaButtonEvent(
             session: MediaSession,
             controllerInfo: MediaSession.ControllerInfo,
             intent: Intent,
         ): Boolean {
             val keyEvent = IntentCompat.getParcelableExtra(intent, Intent.EXTRA_KEY_EVENT, KeyEvent::class.java)
+            if (keyEvent != null && (keyEvent.keyCode == KeyEvent.KEYCODE_MEDIA_NEXT ||
+                    keyEvent.keyCode == KeyEvent.KEYCODE_MEDIA_PREVIOUS)) {
+                val code = keyEvent.keyCode
+                when (keyEvent.action) {
+                    KeyEvent.ACTION_DOWN -> {
+                        if (keyEvent.isLongPress || keyEvent.repeatCount > 0) {
+                            // Long press changes track; suppress the release's short seek.
+                            if (!steeringHeld || steeringCode != code) {
+                                steeringHeld = true
+                                steeringCode = code
+                                this@PlaybackService.player?.let {
+                                    if (code == KeyEvent.KEYCODE_MEDIA_NEXT) it.skipNext() else it.skipPrev()
+                                }
+                            }
+                        }
+                    }
+                    KeyEvent.ACTION_UP -> {
+                        if (!steeringHeld || steeringCode != code) {
+                            // Short steering press = 10-second seek, without changing the queue.
+                            val p = this@PlaybackService.player
+                            if (p != null && p.queue.value.currentItem != null) {
+                                val position = p.progress.value.positionMs
+                                p.seekTo((position + if (code == KeyEvent.KEYCODE_MEDIA_NEXT) 10_000L else -10_000L).coerceAtLeast(0L))
+                            }
+                        }
+                        steeringHeld = false
+                        steeringCode = 0
+                    }
+                }
+                return true
+            }
             if (keyEvent != null &&
                 (keyEvent.keyCode == KeyEvent.KEYCODE_HEADSETHOOK || keyEvent.keyCode == KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE)
             ) {
