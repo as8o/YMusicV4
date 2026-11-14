@@ -1,0 +1,60 @@
+name: Publish YM v4.0.17 recovery checkpoint
+on:
+  push:
+    branches: [ops/publish-ym-v4.0.17-checkpoint]
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+concurrency: ym-v4.0.17-checkpoint
+env:
+  TAG: ym-checkpoint-v4.0.17-2026-11-14
+  SOURCE_SHA: afa468b8ad9f351f8cebbf5b45aec88d68e02cdd
+  BUILD_RUN: '42382109071'
+jobs:
+  checkpoint:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+      - name: Retrieve the original signed APKs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          built="$(gh run view "$BUILD_RUN" -R "$GITHUB_REPOSITORY" --json headSha,conclusion --jq '.headSha + " " + .conclusion')"
+          test "$built" = "$SOURCE_SHA success"
+          gh run download "$BUILD_RUN" -R "$GITHUB_REPOSITORY" -n YM-android-apks -D release
+          cd release
+          for abi in armeabi-v7a arm64-v8a x86 x86_64; do
+            test -f "YMusic-4.0.17-$abi-release.apk"
+          done
+          sha256sum ./*.apk > SHA256SUMS
+      - name: Tag and publish the recovery checkpoint
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          git config user.name 'YM checkpoint automation'
+          git config user.email '97856956+as8o@users.noreply.github.com'
+          git cat-file -e "$SOURCE_SHA^{commit}"
+          if git show-ref --verify --quiet "refs/tags/$TAG"; then
+            test "$(git rev-parse "$TAG^{commit}")" = "$SOURCE_SHA"
+          else
+            git tag -a "$TAG" "$SOURCE_SHA" -m 'YM checkpoint 2026-11-14 | upstream YMusic 4.0.17 | signed build 42382109071'
+            git push origin "refs/tags/$TAG"
+          fi
+          if gh release view "$TAG" -R "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            exit 0
+          fi
+          cat > RELEASE.md <<'NOTES'
+          Recovery checkpoint before the YM upgrade to upstream YMusic 4.0.20.
+
+          - Upstream baseline: [YMusic 4.0.17, 8761846](https://github.com/ymusic-io/YMusicV4/commit/8761846af6f2896a2e205b7e714fb150e12fafab)
+          - Exact YM source and built commit: [afa468b8](https://github.com/as8o/YMusicV4/commit/afa468b8ad9f351f8cebbf5b45aec88d68e02cdd)
+          - Signed Android APKs from [build 42382109071](https://github.com/as8o/YMusicV4/actions/runs/42382109071), with SHA256SUMS. Package io.ymusic.android.ym. The build checked signing continuity against the 4.0.15 release checkpoint.
+          - Original patches: [daily YM](https://github.com/as8o/YMusicV4/compare/8761846...afa468b8), [queue scroll](https://github.com/as8o/YMusicV4/compare/8761846...8e271d04), [steering controls](https://github.com/as8o/YMusicV4/compare/8761846...2c54b287), and [account playlists](https://github.com/as8o/YMusicV4/compare/8761846...3e798c03).
+          NOTES
+          gh release create "$TAG" release/* -R "$GITHUB_REPOSITORY" --verify-tag \
+            --title 'YM checkpoint 2026-11-14 (upstream YMusic 4.0.17)' --notes-file RELEASE.md --latest=false
