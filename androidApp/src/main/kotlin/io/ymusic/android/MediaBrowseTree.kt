@@ -117,10 +117,17 @@ class MediaBrowseTree(private val context: Context, private val graph: AppGraph)
                 browsable(LIB_PLAYLISTS, getString(Res.string.library_tab_playlists)),
             )
             parentId == TAB_DISCOVER -> buildList {
-                add(browsable(DISC_TRENDING, getString(Res.string.tab_music)))
-                add(browsable(DISC_HOME, getString(Res.string.tab_home)))
-                if (!graph.guest && graph.engines.ytLoginStatus()) {
+                val signedIn = !graph.guest && graph.engines.ytLoginStatus()
+                val trending = browsable(DISC_TRENDING, getString(Res.string.tab_music))
+                val home = browsable(DISC_HOME, getString(Res.string.tab_home))
+                // Android Auto can use browse order when it falls back to building dashboard suggestions.
+                if (signedIn) {
+                    add(home)
+                    add(trending)
                     add(browsable(DISC_ACCOUNT, getString(Res.string.tab_account_library)))
+                } else {
+                    add(trending)
+                    add(home)
                 }
             }
             // The nav links are the app's own (same as the phone's AccountLibraryScreen).
