@@ -5,12 +5,14 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.SearchManager
+import android.content.ContentValues
 import android.content.Intent
 import android.graphics.Bitmap
 import android.net.Uri
 import android.net.wifi.WifiManager
 import android.os.Build
 import android.os.Bundle
+import android.os.Environment
 import android.os.PowerManager
 import android.os.SystemClock
 import android.provider.MediaStore
@@ -134,10 +136,14 @@ class PlaybackService : MediaLibraryService() {
             CoroutineExceptionHandler { _, e -> log?.fork("uncaught")?.captureError(e) },
     )
     private val searchResults = HashMap<String, List<MediaItem>>() // guarded by itself
+    private val browseTraceDispatcher = Dispatchers.IO.limitedParallelism(1)
+    private var browseTraceUri: Uri? = null
+    private var browseTraceLines = 0
 
     override fun onCreate() {
         super.onCreate()
         log = (application as YMusicApplication).rootLogger.fork("playback-service")
+        traceBrowse("YM service started, versionCode=${BuildConfig.VERSION_CODE}")
         createChannel()
         // The session must exist before the first bind: a legacy MediaBrowserService bind (Auto on a
         // dead process) that finds no session gets a null binder the framework caches for the whole
@@ -544,6 +550,10 @@ class PlaybackService : MediaLibraryService() {
             } else {
                 MediaBrowseTree.ROOT_ITEM
             }
+            traceBrowse(
+                "root client=${browser.packageName} suggested=${params?.isSuggested} " +
+                    "recent=${params?.isRecent} offline=${params?.isOffline} returned=${root.mediaId}",
+            )
             // The legacy onGetRoot blocks the main thread until the future completes.
             return Futures.immediateFuture(LibraryResult.ofItem(root, params))
         }
@@ -556,8 +566,13 @@ class PlaybackService : MediaLibraryService() {
             pageSize: Int,
             params: LibraryParams?,
         ): ListenableFuture<LibraryResult<ImmutableList<MediaItem>>> = future {
+            val source = traceSource(parentId)
+            traceBrowse("children client=${browser.packageName} source=$source page=$page size=$pageSize")
             val tree = browseTree() ?: return@future LibraryResult.ofError(LibraryResult.RESULT_ERROR_UNKNOWN)
-            LibraryResult.ofItemList(ImmutableList.copyOf(tree.children(parentId, page, pageSize)), params)
+            val items = tree.children(parentId, page, pageSize)
+            val folders = items.map { traceSource(it.mediaId) }.filter { it != "other" }
+            traceBrowse("result source=$source count=${items.size} playable=${items.count { it.mediaMetadata.isPlayable == true }} folders=$folders")
+            LibraryResult.ofItemList(ImmutableList.copyOf(items), params)
         }
 
         override fun onGetItem(
@@ -608,7 +623,9 @@ class PlaybackService : MediaLibraryService() {
         ): ListenableFuture<MutableList<MediaItem>> = future {
             if (mediaItems.singleOrNull()?.requestMetadata?.searchQuery != null) return@future mediaItems
             val tree = browseTree() ?: return@future mediaItems
-            mediaItems.map { tree.item(it.mediaId) ?: it }.toMutableList()
+            val resolved = mediaItems.map { tree.item(it.mediaId) }
+            traceBrowse("play client=${controller.packageName} count=${mediaItems.size} resolved=${resolved.count { it != null }}")
+            mediaItems.mapIndexed { index, item -> resolved[index] ?: item }.toMutableList()
         }
 
         /** "Play" with nothing queued (steering-wheel button, Auto's play on a fresh process):
@@ -623,6 +640,45 @@ class PlaybackService : MediaLibraryService() {
         ): ListenableFuture<MediaSession.MediaItemsWithStartPosition> {
             if (isForPlayback) resumeWhenReady()
             return Futures.immediateFailedFuture(UnsupportedOperationException("resumed via Play again"))
+        }
+    }
+
+    private fun traceSource(id: String): String = when (id) {
+        MediaBrowseTree.ROOT,
+        MediaBrowseTree.SUGGESTED_ROOT_ITEM.mediaId,
+        MediaBrowseTree.TAB_LIBRARY,
+        MediaBrowseTree.TAB_DISCOVER,
+        MediaBrowseTree.TAB_YTMUSIC,
+        MediaBrowseTree.DISC_HOME,
+        MediaBrowseTree.DISC_TRENDING,
+        MediaBrowseTree.DISC_ACCOUNT,
+        MediaBrowseTree.YTM_HOME,
+        -> id
+        else -> "other"
+    }
+
+    private fun traceBrowse(message: String) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return
+        val now = System.currentTimeMillis()
+        serviceScope.launch(browseTraceDispatcher) {
+            if (browseTraceLines >= 150) return@launch
+            browseTraceLines++
+            try {
+                val uri = browseTraceUri ?: contentResolver.insert(
+                    MediaStore.Downloads.EXTERNAL_CONTENT_URI,
+                    ContentValues().apply {
+                        put(MediaStore.MediaColumns.DISPLAY_NAME, "YM-AA-For-You-$now.txt")
+                        put(MediaStore.MediaColumns.MIME_TYPE, "text/plain")
+                        put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
+                    },
+                )?.also { browseTraceUri = it } ?: return@launch
+                contentResolver.openOutputStream(uri, "wa")?.bufferedWriter()?.use {
+                    it.appendLine("$now $message")
+                }
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                log?.log(Logger.Level.WARN, "AA browse trace write failed", e)
+            }
         }
     }
 
