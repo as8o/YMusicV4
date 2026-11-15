@@ -204,9 +204,9 @@ class PlaybackService : MediaLibraryService() {
         }
         serviceScope.launch {
             combine(player.status, player.queue) { status, queue ->
-                Triple(queue.shuffle, queue.loopMode, isPlaying(status, queue))
-            }.distinctUntilChanged().collect { (shuffle, loop, playing) ->
-                session?.setMediaButtonPreferences(customButtons(shuffle, loop, playing))
+                ButtonState(queue.shuffle, queue.loopMode, isPlaying(status, queue), queue.currentItem != null)
+            }.distinctUntilChanged().collect { state ->
+                session?.setMediaButtonPreferences(customButtons(state))
             }
         }
         serviceScope.launch {
@@ -225,61 +225,59 @@ class PlaybackService : MediaLibraryService() {
     private var errorText: Pair<PlayerError, String>? = null
     private val errorTextChanged = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
 
-    /** Auto shows custom actions only (a legacy controller sees no shuffle/repeat otherwise). Android 13+
-     *  media controls show two custom actions, so a paused session trades repeat for close. */
-    private suspend fun customButtons(shuffle: Boolean, loop: LoopMode, playing: Boolean): ImmutableList<CommandButton> {
-        val shuffleButton = CommandButton.Builder(if (shuffle) CommandButton.ICON_SHUFFLE_ON else CommandButton.ICON_SHUFFLE_OFF)
+    private data class ButtonState(val shuffle: Boolean, val loop: LoopMode, val playing: Boolean, val hasItem: Boolean)
+
+    private suspend fun customButtons(state: ButtonState): ImmutableList<CommandButton> {
+        val shuffleButton = CommandButton.Builder(if (state.shuffle) CommandButton.ICON_SHUFFLE_ON else CommandButton.ICON_SHUFFLE_OFF)
             .setDisplayName(getString(Res.string.cd_shuffle))
             .setSessionCommand(COMMAND_SHUFFLE)
             .build()
-        if (!playing) {
+        // Media3's legacy bridge suppresses native Previous/Next when a preference occupies their slots.
+        val seekButtons = if (state.hasItem) {
+            ImmutableList.of(
+                CommandButton.Builder(CommandButton.ICON_SKIP_BACK_10)
+                    .setDisplayName("Rewind 10 seconds")
+                    .setPlayerCommand(androidx.media3.common.Player.COMMAND_SEEK_BACK)
+                    .setSlots(CommandButton.SLOT_OVERFLOW)
+                    .build(),
+                CommandButton.Builder(CommandButton.ICON_SKIP_FORWARD_10)
+                    .setDisplayName("Forward 10 seconds")
+                    .setPlayerCommand(androidx.media3.common.Player.COMMAND_SEEK_FORWARD)
+                    .setSlots(CommandButton.SLOT_OVERFLOW)
+                    .build(),
+            )
+        } else {
+            ImmutableList.of()
+        }
+        val buttons = ImmutableList.builder<CommandButton>()
+        if (!state.playing) {
             val closeButton = CommandButton.Builder(CommandButton.ICON_UNDEFINED)
                 .setCustomIconResId(R.drawable.ic_notification_close)
                 .setDisplayName(getString(R.string.notification_close))
                 .setSessionCommand(COMMAND_CLOSE)
                 .build()
-            return ImmutableList.of(shuffleButton, closeButton)
+            // Keep Close among the first two custom actions for the phone's media controls.
+            return buttons.add(shuffleButton, closeButton).addAll(seekButtons).build()
         }
-        return ImmutableList.of(
-            // Android Auto on a split-screen head unit may show only the first two
-            // custom actions. Prefer rewind and next track in those slots.
-            // Other controls remain available if the host offers more actions.
-            CommandButton.Builder(CommandButton.ICON_SKIP_BACK_10)
-                .setDisplayName("Rewind 10 seconds")
-                .setPlayerCommand(androidx.media3.common.Player.COMMAND_SEEK_BACK)
-                .build(),
-            CommandButton.Builder(CommandButton.ICON_NEXT)
-                .setDisplayName("Next track")
-                .setPlayerCommand(androidx.media3.common.Player.COMMAND_SEEK_TO_NEXT)
-                .build(),
-            CommandButton.Builder(CommandButton.ICON_PREVIOUS)
-                .setDisplayName("Previous track")
-                .setPlayerCommand(androidx.media3.common.Player.COMMAND_SEEK_TO_PREVIOUS)
-                .build(),
-            CommandButton.Builder(CommandButton.ICON_SKIP_FORWARD_10)
-                .setDisplayName("Forward 10 seconds")
-                .setPlayerCommand(androidx.media3.common.Player.COMMAND_SEEK_FORWARD)
-                .build(),
-            shuffleButton,
-            CommandButton.Builder(
-                when (loop) {
-                    LoopMode.None -> CommandButton.ICON_REPEAT_OFF
-                    LoopMode.All -> CommandButton.ICON_REPEAT_ALL
-                    LoopMode.One -> CommandButton.ICON_REPEAT_ONE
-                },
-            )
-                .setDisplayName(
-                    getString(
-                        when (loop) {
-                            LoopMode.None -> Res.string.cd_repeat_off
-                            LoopMode.All -> Res.string.cd_repeat_all
-                            LoopMode.One -> Res.string.cd_repeat_one
-                        },
-                    ),
-                )
-                .setSessionCommand(COMMAND_REPEAT)
-                .build(),
+        val repeatButton = CommandButton.Builder(
+            when (state.loop) {
+                LoopMode.None -> CommandButton.ICON_REPEAT_OFF
+                LoopMode.All -> CommandButton.ICON_REPEAT_ALL
+                LoopMode.One -> CommandButton.ICON_REPEAT_ONE
+            },
         )
+            .setDisplayName(
+                getString(
+                    when (state.loop) {
+                        LoopMode.None -> Res.string.cd_repeat_off
+                        LoopMode.All -> Res.string.cd_repeat_all
+                        LoopMode.One -> Res.string.cd_repeat_one
+                    },
+                ),
+            )
+            .setSessionCommand(COMMAND_REPEAT)
+            .build()
+        return buttons.addAll(seekButtons).add(shuffleButton, repeatButton).build()
     }
 
     /** [playOrResume] once the graph exists. Single-flight: one play press reaches both
