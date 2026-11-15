@@ -107,6 +107,7 @@ class MediaBrowseTree(private val context: Context, private val graph: AppGraph)
 
     suspend fun children(parentId: String, page: Int, pageSize: Int): List<MediaItem> {
         val all = when {
+            parentId == SUGGESTED_ROOT -> suggestedVideos()
             parentId == ROOT -> listOf(
                 browsable(TAB_LIBRARY, getString(Res.string.section_library)),
                 browsable(TAB_DISCOVER, getString(Res.string.section_discover)),
@@ -166,6 +167,7 @@ class MediaBrowseTree(private val context: Context, private val graph: AppGraph)
 
     suspend fun item(mediaId: String): MediaItem? = when {
         mediaId == ROOT -> rootItem()
+        mediaId == SUGGESTED_ROOT -> SUGGESTED_ROOT_ITEM
         mediaId.startsWith(YT_SONG_PREFIX) -> {
             val videoId = mediaId.removePrefix(YT_SONG_PREFIX)
             ytItem(videoId)?.toMediaItem(groupTitle = null)
@@ -278,6 +280,20 @@ class MediaBrowseTree(private val context: Context, private val graph: AppGraph)
 
     // ---- engine feeds ----
 
+    private suspend fun suggestedVideos(): List<MediaItem> {
+        if (graph.guest || !graph.engines.ytLoginStatus()) return emptyList()
+        return graph.engines.extractHomeFeed().sections.asSequence()
+            .flatMap { it.items }
+            .filter { it.kind == YtFeedItem.KIND_VIDEO }
+            .distinctBy { it.id }
+            .take(SUGGESTED_VIDEO_LIMIT)
+            .map { item ->
+                remember(item)
+                item.toMediaItem(groupTitle = null)
+            }
+            .toList()
+    }
+
     /** Shelves flattened into one list: videos playable, playlists/albums browsable, each tagged
      *  with its shelf title as a group heading; channels and nav tags have no Auto surface. */
     /** Unlike the library overview, /feed/playlists includes saved playlists owned by others.
@@ -367,6 +383,8 @@ class MediaBrowseTree(private val context: Context, private val graph: AppGraph)
 
     companion object {
         const val ROOT = "root"
+        private const val SUGGESTED_ROOT = "suggested"
+        private const val SUGGESTED_VIDEO_LIMIT = 10
 
         /** Built without the graph: the root query is answered before the graph exists. */
         val ROOT_ITEM: MediaItem = MediaItem.Builder()
@@ -380,6 +398,8 @@ class MediaBrowseTree(private val context: Context, private val graph: AppGraph)
                     .build(),
             )
             .build()
+
+        val SUGGESTED_ROOT_ITEM: MediaItem = ROOT_ITEM.buildUpon().setMediaId(SUGGESTED_ROOT).build()
 
         const val TAB_LIBRARY = "tab_library"
         const val TAB_DISCOVER = "tab_discover"

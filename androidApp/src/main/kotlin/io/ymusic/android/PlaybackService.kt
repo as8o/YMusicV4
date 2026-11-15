@@ -538,10 +538,15 @@ class PlaybackService : MediaLibraryService() {
             session: MediaLibrarySession,
             browser: MediaSession.ControllerInfo,
             params: LibraryParams?,
-        ): ListenableFuture<LibraryResult<MediaItem>> =
-            // Must be already done: the legacy onGetRoot blocks the main thread until this resolves,
-            // and its completion callback is posted to that same main thread — a pending future deadlocks.
-            Futures.immediateFuture(LibraryResult.ofItem(MediaBrowseTree.ROOT_ITEM, params))
+        ): ListenableFuture<LibraryResult<MediaItem>> {
+            val root = if (params?.isSuggested == true && !params.isOffline) {
+                MediaBrowseTree.SUGGESTED_ROOT_ITEM
+            } else {
+                MediaBrowseTree.ROOT_ITEM
+            }
+            // The legacy onGetRoot blocks the main thread until the future completes.
+            return Futures.immediateFuture(LibraryResult.ofItem(root, params))
+        }
 
         override fun onGetChildren(
             session: MediaLibrarySession,
