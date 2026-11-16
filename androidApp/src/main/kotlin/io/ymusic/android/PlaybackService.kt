@@ -567,9 +567,10 @@ class PlaybackService : MediaLibraryService() {
             params: LibraryParams?,
         ): ListenableFuture<LibraryResult<ImmutableList<MediaItem>>> = future {
             val source = traceSource(parentId)
-            traceBrowse("children client=${browser.packageName} source=$source page=$page size=$pageSize")
+            val includeTrending = browser.packageName != GOOGLE_APP_PACKAGE
+            traceBrowse("children client=${browser.packageName} source=$source page=$page size=$pageSize includeTrending=$includeTrending")
             val tree = browseTree() ?: return@future LibraryResult.ofError(LibraryResult.RESULT_ERROR_UNKNOWN)
-            val items = tree.children(parentId, page, pageSize)
+            val items = tree.children(parentId, page, pageSize, includeTrending)
             val folders = items.map { traceSource(it.mediaId) }.filter { it != "other" }
             traceBrowse("result source=$source count=${items.size} playable=${items.count { it.mediaMetadata.isPlayable == true }} folders=$folders")
             LibraryResult.ofItemList(ImmutableList.copyOf(items), params)
@@ -1058,6 +1059,7 @@ class PlaybackService : MediaLibraryService() {
     }
 
     private companion object {
+        private const val GOOGLE_APP_PACKAGE = "com.google.android.googlequicksearchbox"
         /** How long an Auto browse call waits for a cold-start graph before failing. */
         const val INIT_TIMEOUT_MS = 30_000L
         const val CHANNEL_ID = "io.ymusic.playback"

@@ -105,7 +105,7 @@ class MediaBrowseTree(private val context: Context, private val graph: AppGraph)
         graph.engines.extractPlaylistDetail(url)
     }
 
-    suspend fun children(parentId: String, page: Int, pageSize: Int): List<MediaItem> {
+    suspend fun children(parentId: String, page: Int, pageSize: Int, includeTrending: Boolean): List<MediaItem> {
         val all = when {
             parentId == SUGGESTED_ROOT -> suggestedVideos()
             parentId == ROOT -> listOf(
@@ -119,17 +119,12 @@ class MediaBrowseTree(private val context: Context, private val graph: AppGraph)
             )
             parentId == TAB_DISCOVER -> buildList {
                 val signedIn = !graph.guest && graph.engines.ytLoginStatus()
-                val trending = browsable(DISC_TRENDING, getString(Res.string.tab_music))
                 val home = browsable(DISC_HOME, getString(Res.string.tab_home))
                 // Android Auto can use browse order when it falls back to building dashboard suggestions.
-                if (signedIn) {
-                    add(home)
-                    add(trending)
-                    add(browsable(DISC_ACCOUNT, getString(Res.string.tab_account_library)))
-                } else {
-                    add(trending)
-                    add(home)
-                }
+                if (signedIn) add(home)
+                if (includeTrending) add(browsable(DISC_TRENDING, getString(Res.string.tab_music)))
+                if (!signedIn) add(home)
+                if (signedIn) add(browsable(DISC_ACCOUNT, getString(Res.string.tab_account_library)))
             }
             // The nav links are the app's own (same as the phone's AccountLibraryScreen).
             parentId == DISC_ACCOUNT -> listOf(
@@ -151,7 +146,7 @@ class MediaBrowseTree(private val context: Context, private val graph: AppGraph)
             parentId == LIB_SONGS || parentId.startsWith(LOCAL_LIST_PREFIX) ->
                 localSongs(parentId).also { lastLocal = parentId to it }
                     .map { song -> song.toMediaItem(parentId) }
-            parentId == DISC_TRENDING -> feedChildren(graph.engines.extractTrendingMusicFeed())
+            parentId == DISC_TRENDING && includeTrending -> feedChildren(graph.engines.extractTrendingMusicFeed())
             parentId == DISC_HOME -> feedChildren(graph.engines.extractHomeFeed())
             parentId == YTM_HOME -> feedChildren(graph.engines.extractMusicHome())
             parentId == YTM_EXPLORE -> feedChildren(graph.engines.extractMusicExplore())
