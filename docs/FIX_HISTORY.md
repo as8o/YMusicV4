@@ -9,15 +9,15 @@ This document tracks the current YM patch set and links to historical *immutable
 | Android Auto Queue stability | Disable periodic MediaSession position notifications that can reset scroll position in the car queue; Media3 timeline/queue retains other behavior. | [`fix/aa-queue-scroll`](https://github.com/as8o/YMusicV4/compare/master...fix/aa-queue-scroll) |
 | Android Auto steering and seeking | On Toyota RAV4: short Next/Previous = ±10s, two separate clicks = ±20s, long press = skip track; place 10s seeks in overflow slots so native Previous/Next remain visible while preserving original headset and playback controls. No low-level Fermata-style key state machine. | [`fix/aa-steering-seek`](https://github.com/as8o/YMusicV4/compare/master...fix/aa-steering-seek) |
 | Android Auto account playlists | Show a full signed-in saved-playlist feed, including playlists owned by others, and allow navigation through continuation pages. The upstream account-library overview only contains preview shelves. | [`fix/aa-account-playlists`](https://github.com/as8o/YMusicV4/compare/master...fix/aa-account-playlists) |
-| Android Auto Home recommendations | Signed-in Home suggestions and Google-client Home-only browse behavior. Retained from the latest test build. For You still requires device validation. | [`fix/aa-home-recommendations`](https://github.com/as8o/YMusicV4/compare/master...fix/aa-home-recommendations) |
+| Android Auto Home recommendations | Signed-in Home suggestions and Google-client Home-only browse behavior. Retained from the latest test build. The user confirmed the Home feed in For You works on 2026-11-21. Retain its Google-client behavior. Ordinary Discover order follows upstream. | [`fix/aa-home-recommendations`](https://github.com/as8o/YMusicV4/compare/master...fix/aa-home-recommendations) |
 | YM branding/compatibility | Blue launcher, Android display name YM, `io.ymusic.android.ym`, original YM signing credentials, increasing version code; Windows/macOS/Linux packaging from upstream. | [Daily-use delta](https://github.com/as8o/YMusicV4/compare/master...ym/main) |
 
 ## Upgrade on 2026-11-21
 
 - Active fixes apply to upstream 4.0.27. Upstream still provides playlist-context playback and Video Details.
-- YM branding, signing, build workflow and browse tracing are excluded from all active fix branches.
+- YM branding, signing, build workflow and browse tracing are excluded from all active fix branches. Browse tracing is included in the main YM build.
 - Daily source before the upgrade was 9b22ec2896db328dec7aa06f0a2e58e99ab25a9d, successful build 43648015830.
-- The latest Home-only diagnostic source was 4fcb4a375bc868cb90b15caf518f3174b2ee0d47, successful build 43830159730. Its functional Home-only change is retained. Its Downloads trace is preserved on the diagnostic branch.
+- The latest Home-only diagnostic source was 4fcb4a375bc868cb90b15caf518f3174b2ee0d47, successful build 43830159730. Its functional Home-only change is retained. Its Downloads trace is now included in the main YM build.
 - Packaging conflicts were resolved by retaining upstream appVersionCode() as YM's fallback and upstream Windows development-instance isolation with the stable YM release identity.
 - The experimental missing-video-titles patch remains archived and excluded from the active build.
 
