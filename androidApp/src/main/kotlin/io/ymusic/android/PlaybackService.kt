@@ -159,6 +159,9 @@ class PlaybackService : MediaLibraryService() {
             // instead of media3's DataSource loader, which knows neither art:// nor our caches.
             // CacheBitmapLoader memoizes the current artwork; our loader stays out of the LRU.
             .setBitmapLoader(CacheBitmapLoader(bitmapLoader))
+            // Android Auto may reset Queue scrolling on periodic position notifications.
+            // Avoid spurious position notifications; actual position remains available on request.
+            .setPeriodicPositionUpdateEnabled(false)
             .build()
         // The graph is normally long built when playback starts this service (await returns
         // inline); the cold path initializes async — onStartCommand's placeholder covers the
@@ -202,9 +205,9 @@ class PlaybackService : MediaLibraryService() {
         }
         serviceScope.launch {
             combine(player.status, player.queue) { status, queue ->
-                Triple(queue.shuffle, queue.loopMode, isPlaying(status, queue))
-            }.distinctUntilChanged().collect { (shuffle, loop, playing) ->
-                session?.setMediaButtonPreferences(customButtons(shuffle, loop, playing))
+                ButtonState(queue.shuffle, queue.loopMode, isPlaying(status, queue), queue.currentItem != null)
+            }.distinctUntilChanged().collect { state ->
+                session?.setMediaButtonPreferences(customButtons(state))
             }
         }
         serviceScope.launch {
@@ -223,42 +226,59 @@ class PlaybackService : MediaLibraryService() {
     private var errorText: Pair<PlayerError, String>? = null
     private val errorTextChanged = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
 
-    /** Auto shows custom actions only (a legacy controller sees no shuffle/repeat otherwise). Android 13+
-     *  media controls show two custom actions, so a paused session trades repeat for close. */
-    private suspend fun customButtons(shuffle: Boolean, loop: LoopMode, playing: Boolean): ImmutableList<CommandButton> {
-        val shuffleButton = CommandButton.Builder(if (shuffle) CommandButton.ICON_SHUFFLE_ON else CommandButton.ICON_SHUFFLE_OFF)
+    private data class ButtonState(val shuffle: Boolean, val loop: LoopMode, val playing: Boolean, val hasItem: Boolean)
+
+    private suspend fun customButtons(state: ButtonState): ImmutableList<CommandButton> {
+        val shuffleButton = CommandButton.Builder(if (state.shuffle) CommandButton.ICON_SHUFFLE_ON else CommandButton.ICON_SHUFFLE_OFF)
             .setDisplayName(getString(Res.string.cd_shuffle))
             .setSessionCommand(COMMAND_SHUFFLE)
             .build()
-        if (!playing) {
+        // Media3's legacy bridge suppresses native Previous/Next when a preference occupies their slots.
+        val seekButtons = if (state.hasItem) {
+            ImmutableList.of(
+                CommandButton.Builder(CommandButton.ICON_SKIP_BACK_10)
+                    .setDisplayName("Rewind 10 seconds")
+                    .setPlayerCommand(androidx.media3.common.Player.COMMAND_SEEK_BACK)
+                    .setSlots(CommandButton.SLOT_OVERFLOW)
+                    .build(),
+                CommandButton.Builder(CommandButton.ICON_SKIP_FORWARD_10)
+                    .setDisplayName("Forward 10 seconds")
+                    .setPlayerCommand(androidx.media3.common.Player.COMMAND_SEEK_FORWARD)
+                    .setSlots(CommandButton.SLOT_OVERFLOW)
+                    .build(),
+            )
+        } else {
+            ImmutableList.of()
+        }
+        val buttons = ImmutableList.builder<CommandButton>()
+        if (!state.playing) {
             val closeButton = CommandButton.Builder(CommandButton.ICON_UNDEFINED)
                 .setCustomIconResId(R.drawable.ic_notification_close)
                 .setDisplayName(getString(R.string.notification_close))
                 .setSessionCommand(COMMAND_CLOSE)
                 .build()
-            return ImmutableList.of(shuffleButton, closeButton)
+            // Keep Close among the first two custom actions for the phone's media controls.
+            return buttons.add(shuffleButton, closeButton).addAll(seekButtons).build()
         }
-        return ImmutableList.of(
-            shuffleButton,
-            CommandButton.Builder(
-                when (loop) {
-                    LoopMode.None -> CommandButton.ICON_REPEAT_OFF
-                    LoopMode.All -> CommandButton.ICON_REPEAT_ALL
-                    LoopMode.One -> CommandButton.ICON_REPEAT_ONE
-                },
-            )
-                .setDisplayName(
-                    getString(
-                        when (loop) {
-                            LoopMode.None -> Res.string.cd_repeat_off
-                            LoopMode.All -> Res.string.cd_repeat_all
-                            LoopMode.One -> Res.string.cd_repeat_one
-                        },
-                    ),
-                )
-                .setSessionCommand(COMMAND_REPEAT)
-                .build(),
+        val repeatButton = CommandButton.Builder(
+            when (state.loop) {
+                LoopMode.None -> CommandButton.ICON_REPEAT_OFF
+                LoopMode.All -> CommandButton.ICON_REPEAT_ALL
+                LoopMode.One -> CommandButton.ICON_REPEAT_ONE
+            },
         )
+            .setDisplayName(
+                getString(
+                    when (state.loop) {
+                        LoopMode.None -> Res.string.cd_repeat_off
+                        LoopMode.All -> Res.string.cd_repeat_all
+                        LoopMode.One -> Res.string.cd_repeat_one
+                    },
+                ),
+            )
+            .setSessionCommand(COMMAND_REPEAT)
+            .build()
+        return buttons.addAll(seekButtons).add(shuffleButton, repeatButton).build()
     }
 
     /** [playOrResume] once the graph exists. Single-flight: one play press reaches both
@@ -464,12 +484,48 @@ class PlaybackService : MediaLibraryService() {
             return Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
         }
 
+        // Experimental: some Android Auto head units send only a Next/Previous command,
+        // not raw DOWN/UP/long-press events. Intercept only events actually delivered.
+        private var steeringHeld = false
+        private var steeringCode = 0
+
         override fun onMediaButtonEvent(
             session: MediaSession,
             controllerInfo: MediaSession.ControllerInfo,
             intent: Intent,
         ): Boolean {
             val keyEvent = IntentCompat.getParcelableExtra(intent, Intent.EXTRA_KEY_EVENT, KeyEvent::class.java)
+            if (keyEvent != null && (keyEvent.keyCode == KeyEvent.KEYCODE_MEDIA_NEXT ||
+                    keyEvent.keyCode == KeyEvent.KEYCODE_MEDIA_PREVIOUS)) {
+                val code = keyEvent.keyCode
+                when (keyEvent.action) {
+                    KeyEvent.ACTION_DOWN -> {
+                        if (keyEvent.isLongPress || keyEvent.repeatCount > 0) {
+                            // Long press changes track; suppress the release's short seek.
+                            if (!steeringHeld || steeringCode != code) {
+                                steeringHeld = true
+                                steeringCode = code
+                                this@PlaybackService.player?.let {
+                                    if (code == KeyEvent.KEYCODE_MEDIA_NEXT) it.skipNext() else it.skipPrev()
+                                }
+                            }
+                        }
+                    }
+                    KeyEvent.ACTION_UP -> {
+                        if (!steeringHeld || steeringCode != code) {
+                            // Short steering press = 10-second seek, without changing the queue.
+                            val p = this@PlaybackService.player
+                            if (p != null && p.queue.value.currentItem != null) {
+                                val position = p.progress.value.positionMs
+                                p.seekTo((position + if (code == KeyEvent.KEYCODE_MEDIA_NEXT) 10_000L else -10_000L).coerceAtLeast(0L))
+                            }
+                        }
+                        steeringHeld = false
+                        steeringCode = 0
+                    }
+                }
+                return true
+            }
             if (keyEvent != null &&
                 (keyEvent.keyCode == KeyEvent.KEYCODE_HEADSETHOOK || keyEvent.keyCode == KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE)
             ) {
@@ -483,10 +539,15 @@ class PlaybackService : MediaLibraryService() {
             session: MediaLibrarySession,
             browser: MediaSession.ControllerInfo,
             params: LibraryParams?,
-        ): ListenableFuture<LibraryResult<MediaItem>> =
-            // Must be already done: the legacy onGetRoot blocks the main thread until this resolves,
-            // and its completion callback is posted to that same main thread — a pending future deadlocks.
-            Futures.immediateFuture(LibraryResult.ofItem(MediaBrowseTree.ROOT_ITEM, params))
+        ): ListenableFuture<LibraryResult<MediaItem>> {
+            val root = if (params?.isSuggested == true && !params.isOffline) {
+                MediaBrowseTree.SUGGESTED_ROOT_ITEM
+            } else {
+                MediaBrowseTree.ROOT_ITEM
+            }
+            // The legacy onGetRoot blocks the main thread until the future completes.
+            return Futures.immediateFuture(LibraryResult.ofItem(root, params))
+        }
 
         override fun onGetChildren(
             session: MediaLibrarySession,
@@ -497,7 +558,7 @@ class PlaybackService : MediaLibraryService() {
             params: LibraryParams?,
         ): ListenableFuture<LibraryResult<ImmutableList<MediaItem>>> = future {
             val tree = browseTree() ?: return@future LibraryResult.ofError(LibraryResult.RESULT_ERROR_UNKNOWN)
-            LibraryResult.ofItemList(ImmutableList.copyOf(tree.children(parentId, page, pageSize)), params)
+            LibraryResult.ofItemList(ImmutableList.copyOf(tree.children(parentId, page, pageSize, browser.packageName != GOOGLE_APP_PACKAGE)), params)
         }
 
         override fun onGetItem(
@@ -944,6 +1005,7 @@ class PlaybackService : MediaLibraryService() {
     }
 
     private companion object {
+        private const val GOOGLE_APP_PACKAGE = "com.google.android.googlequicksearchbox"
         /** How long an Auto browse call waits for a cold-start graph before failing. */
         const val INIT_TIMEOUT_MS = 30_000L
         const val CHANNEL_ID = "io.ymusic.playback"
