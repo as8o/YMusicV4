@@ -1,0 +1,66 @@
+name: Publish YM v4.0.20 recovery checkpoint
+on:
+  push:
+    branches: [ops/publish-ym-v4.0.20-checkpoint]
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+concurrency: ym-v4.0.20-checkpoint
+env:
+  TAG: ym-checkpoint-v4.0.20-2026-11-21
+  SOURCE_SHA: 9b22ec2896db328dec7aa06f0a2e58e99ab25a9d
+  BUILD_RUN: '43648015830'
+jobs:
+  checkpoint:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+      - name: Retrieve the original signed APKs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          built="$(gh run view "$BUILD_RUN" -R "$GITHUB_REPOSITORY" --json headSha,conclusion --jq '.headSha + " " + .conclusion')"
+          test "$built" = "$SOURCE_SHA success"
+          gh run download "$BUILD_RUN" -R "$GITHUB_REPOSITORY" -n YM-android-apks -D release
+          gh run download 43830159730 -R "$GITHUB_REPOSITORY" -n YM-android-apks -D diagnostic
+          for file in diagnostic/*.apk; do cp "$file" "release/diagnostic-$(basename "$file")"; done
+          cd release
+          for abi in armeabi-v7a arm64-v8a x86 x86_64; do
+            test -f "YMusic-4.0.20-$abi-release.apk"
+          done
+          sha256sum ./*.apk > SHA256SUMS
+      - name: Tag and publish the recovery checkpoint
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          git config user.name 'YM checkpoint automation'
+          git config user.email '97856956+as8o@users.noreply.github.com'
+          git cat-file -e "$SOURCE_SHA^{commit}"
+          if git show-ref --verify --quiet "refs/tags/$TAG"; then
+            test "$(git rev-parse "$TAG^{commit}")" = "$SOURCE_SHA"
+          else
+            git tag -a "$TAG" "$SOURCE_SHA" -m 'YM checkpoint 2026-11-21 | upstream YMusic 4.0.17 | signed build 43648015830'
+            git push origin "refs/tags/$TAG"
+          fi
+          if gh release view "$TAG" -R "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            exit 0
+          fi
+          cat > RELEASE.md <<'NOTES'
+          Recovery checkpoint before the YM upgrade to upstream YMusic 4.0.27.
+
+          - Upstream baseline was YMusic 4.0.20 at b1e4745aee1c770f9171c4c745a8748252f2c887.
+          - Daily source and signed build source were 9b22ec2896db328dec7aa06f0a2e58e99ab25a9d. Signed APKs are from build 43648015830.
+          - Files beginning diagnostic- are from successful build 43830159730 at source 4fcb4a375bc868cb90b15caf518f3174b2ee0d47. This variant includes the later native track buttons, Home-only Google browse behavior and Downloads trace.
+          - Original daily changes https://github.com/as8o/YMusicV4/compare/b1e4745...9b22ec289
+          - Original controls https://github.com/as8o/YMusicV4/compare/b1e4745...ba4d611e8
+          - Original recommendations https://github.com/as8o/YMusicV4/compare/ef6479774...d677b0490
+          - Original diagnostic changes https://github.com/as8o/YMusicV4/compare/9b22ec289...4fcb4a375
+          - SHA256SUMS covers all APKs. These are archived original build artifacts.
+          NOTES
+          gh release create "$TAG" release/* -R "$GITHUB_REPOSITORY" --verify-tag \
+            --title 'YM checkpoint 2026-11-21 (upstream YMusic 4.0.17)' --notes-file RELEASE.md --latest=false
