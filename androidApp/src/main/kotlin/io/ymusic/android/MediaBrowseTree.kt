@@ -34,10 +34,10 @@ import io.ymusic.ui.resources.library_tab_playlists
 import io.ymusic.ui.resources.library_tab_songs
 import io.ymusic.ui.resources.playlist_recent_play
 import io.ymusic.ui.resources.playlist_top_tracks
-import io.ymusic.ui.resources.show_more
 import io.ymusic.ui.resources.section_discover
 import io.ymusic.ui.resources.section_library
 import io.ymusic.ui.resources.section_yt_music
+import io.ymusic.ui.resources.show_more
 import io.ymusic.ui.resources.tab_account_library
 import io.ymusic.ui.resources.tab_home
 import io.ymusic.ui.resources.tab_music
