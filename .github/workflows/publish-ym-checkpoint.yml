@@ -5,7 +5,7 @@ on:
   workflow_dispatch:
 permissions:
   contents: write
-  actions: read
+  actions: write
 concurrency: ym-v4.0.20-checkpoint
 env:
   TAG: ym-checkpoint-v4.0.20-2026-11-21
@@ -15,6 +15,16 @@ jobs:
   checkpoint:
     runs-on: ubuntu-24.04
     steps:
+      - name: Keep fork builds Android-only
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh workflow disable release.yml -R "$GITHUB_REPOSITORY"
+          state="$(gh run view 44886035014 -R "$GITHUB_REPOSITORY" --json status --jq .status)"
+          if [ "$state" != completed ]; then
+            gh run cancel 44886035014 -R "$GITHUB_REPOSITORY"
+          fi
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           fetch-depth: 0
