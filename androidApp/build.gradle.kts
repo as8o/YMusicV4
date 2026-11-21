@@ -53,10 +53,10 @@ android {
     ndkVersion = "28.2.13676358"
 
     defaultConfig {
-        applicationId = "io.ymusic.android"
+        applicationId = "io.ymusic.android.ym"
         minSdk = Versions.minSdk
         targetSdk = Versions.targetSdk
-        versionCode = appVersionCode()
+        versionCode = providers.gradleProperty("ymBuildCode").orNull?.toIntOrNull() ?: (30_000 + appVersionCode())
         versionName = appVersionName
         buildConfigField("String", "SENTRY_DSN", "\"${sentryDsn()}\"")
         buildConfigField("String", "SENTRY_ENVIRONMENT", "\"${sentryEnvironment()}\"")

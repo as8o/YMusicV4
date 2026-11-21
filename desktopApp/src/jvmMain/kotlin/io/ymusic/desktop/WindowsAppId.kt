@@ -11,7 +11,7 @@ import kmpcommon.log.Logger
  * A dev workspace's run takes its own, so each gets its own taskbar button.
  */
 internal object WindowsAppId {
-    private const val RELEASE_ID = "io.ymusic.windows"
+    private const val RELEASE_ID = "io.ymusic.ym.windows"
 
     val id: String = DevInstance.workspaceTag?.let { "$RELEASE_ID.dev.$it" } ?: RELEASE_ID
 
