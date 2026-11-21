@@ -33,6 +33,23 @@ internal class StartupCleanups(
 
     suspend fun run() {
         delay(START_DELAY_MS)
+        try {
+            withContext(Dispatchers.IO) {
+                val cutoff = System.currentTimeMillis() - 24 * 60 * 60 * 1_000L
+                val files = context.cacheDir.listFiles() ?: throw java.io.IOException("Cannot list app cache")
+                for (file in files) {
+                    if (file.name.startsWith("ym-diagnostic-") && file.name.endsWith(".log.gz") &&
+                        file.lastModified() < cutoff && !file.delete()
+                    ) {
+                        logger?.fork("diagnostic-export")?.log(Logger.Level.WARN, "stale temporary log export could not be removed")
+                    }
+                }
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            logger?.fork("diagnostic-export")?.log(Logger.Level.WARN, "temporary log cleanup failed; retrying next launch", e)
+        }
         for (cleanup in cleanups) {
             if (settings.flow(cleanup.done).value) continue
             try {

@@ -697,4 +697,6 @@
     <string name="downloads_cancel_selected_message">Az eddig letöltött rész törlődik.</string>
     <string name="downloads_cancel_selected_keep">Megtartás</string>
     <string name="data_dir_unusable">A YMusic nem tudja megnyitni az adatmappáját (%1$s). Győződj meg róla, hogy olyan mappa, amelybe írhatsz, majd nyisd meg újra a YMusicot. (%2$s)</string>
+    <string name="settings_save_diagnostic_log">Diagnosztikai napló mentése</string>
+    <string name="settings_save_diagnostic_log_hint">Az alkalmazás legutóbbi naplójának tömörített exportálása</string>
 </resources>

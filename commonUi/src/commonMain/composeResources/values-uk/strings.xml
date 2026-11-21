@@ -879,4 +879,6 @@
     <string name="downloads_cancel_selected_message">Уже завантажені дані буде видалено.</string>
     <string name="downloads_cancel_selected_keep">Залишити</string>
     <string name="data_dir_unusable">YMusic не вдається відкрити свою папку з даними %1$s. Переконайтеся, що це папка, у яку можна записувати, і знову відкрийте YMusic. (%2$s)</string>
+    <string name="settings_save_diagnostic_log">Зберегти журнал діагностики</string>
+    <string name="settings_save_diagnostic_log_hint">Експортувати стиснену копію нещодавнього журналу застосунку</string>
 </resources>

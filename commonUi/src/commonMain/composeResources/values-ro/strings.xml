@@ -710,4 +710,6 @@
     <string name="downloads_cancel_selected_message">Ce s-a descărcat până acum va fi șters.</string>
     <string name="downloads_cancel_selected_keep">Păstrează</string>
     <string name="data_dir_unusable">YMusic nu își poate deschide dosarul de date, %1$s. Asigură-te că este un dosar în care poți scrie, apoi deschide din nou YMusic. (%2$s)</string>
+    <string name="settings_save_diagnostic_log">Salvează jurnalul de diagnostic</string>
+    <string name="settings_save_diagnostic_log_hint">Exportă o copie comprimată a jurnalului recent al aplicației</string>
 </resources>

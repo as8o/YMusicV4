@@ -684,4 +684,6 @@
     <string name="downloads_cancel_selected_message">Bahagian yang sudah dimuat turun akan dipadam.</string>
     <string name="downloads_cancel_selected_keep">Kekalkan</string>
     <string name="data_dir_unusable">YMusic tidak dapat membuka folder datanya, %1$s. Pastikan ia folder yang boleh anda tulis, kemudian buka YMusic semula. (%2$s)</string>
+    <string name="settings_save_diagnostic_log">Simpan log diagnostik</string>
+    <string name="settings_save_diagnostic_log_hint">Eksport salinan termampat log aplikasi terkini</string>
 </resources>

@@ -697,4 +697,6 @@
     <string name="downloads_cancel_selected_message">ಇಲ್ಲಿಯವರೆಗೆ ಡೌನ್‌ಲೋಡ್ ಆಗಿರುವುದನ್ನು ಅಳಿಸಲಾಗುತ್ತದೆ.</string>
     <string name="downloads_cancel_selected_keep">ಇರಿಸಿ</string>
     <string name="data_dir_unusable">YMusic ತನ್ನ ಡೇಟಾ ಫೋಲ್ಡರ್ %1$s ಅನ್ನು ತೆರೆಯಲು ಸಾಧ್ಯವಿಲ್ಲ. ಅದು ನೀವು ಬರೆಯಬಹುದಾದ ಫೋಲ್ಡರ್ ಎಂದು ಖಚಿತಪಡಿಸಿಕೊಳ್ಳಿ, ನಂತರ YMusic ಅನ್ನು ಮತ್ತೆ ತೆರೆಯಿರಿ. (%2$s)</string>
+    <string name="settings_save_diagnostic_log">ರೋಗನಿರ್ಣಯ ಲಾಗ್ ಉಳಿಸಿ</string>
+    <string name="settings_save_diagnostic_log_hint">ಇತ್ತೀಚಿನ ಆ್ಯಪ್ ಲಾಗ್‌ನ ಸಂಕುಚಿತ ಪ್ರತಿಯನ್ನು ರಫ್ತು ಮಾಡಿ</string>
 </resources>

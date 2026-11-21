@@ -881,4 +881,6 @@
     <string name="downloads_cancel_selected_message">سيُحذف ما تم تنزيله حتى الآن.</string>
     <string name="downloads_cancel_selected_keep">إبقاء</string>
     <string name="data_dir_unusable">لا يمكن لـ YMusic فتح مجلد البيانات الخاص به، %1$s. تأكد من أنه مجلد يمكنك الكتابة فيه، ثم افتح YMusic مرة أخرى. (%2$s)</string>
+    <string name="settings_save_diagnostic_log">حفظ سجل التشخيص</string>
+    <string name="settings_save_diagnostic_log_hint">تصدير نسخة مضغوطة من سجل التطبيق الأخير</string>
 </resources>

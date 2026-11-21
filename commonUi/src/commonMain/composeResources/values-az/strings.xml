@@ -697,4 +697,6 @@
     <string name="downloads_cancel_selected_message">İndiyədək yüklənənlər silinəcək.</string>
     <string name="downloads_cancel_selected_keep">Saxla</string>
     <string name="data_dir_unusable">YMusic məlumat qovluğunu (%1$s) aça bilmir. Bunun yaza biləcəyiniz qovluq olduğuna əmin olun, sonra YMusic-i yenidən açın. (%2$s)</string>
+    <string name="settings_save_diagnostic_log">Diaqnostika jurnalını saxla</string>
+    <string name="settings_save_diagnostic_log_hint">Son tətbiq jurnalının sıxılmış nüsxəsini ixrac et</string>
 </resources>

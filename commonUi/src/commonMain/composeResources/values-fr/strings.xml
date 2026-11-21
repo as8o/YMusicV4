@@ -710,4 +710,6 @@
     <string name="downloads_cancel_selected_message">Ce qui a déjà été téléchargé sera supprimé.</string>
     <string name="downloads_cancel_selected_keep">Conserver</string>
     <string name="data_dir_unusable">YMusic ne peut pas ouvrir son dossier de données, %1$s. Vérifiez qu'il s'agit d'un dossier dans lequel vous pouvez écrire, puis rouvrez YMusic. (%2$s)</string>
+    <string name="settings_save_diagnostic_log">Enregistrer le journal de diagnostic</string>
+    <string name="settings_save_diagnostic_log_hint">Exporter une copie compressée du journal récent de l’application</string>
 </resources>

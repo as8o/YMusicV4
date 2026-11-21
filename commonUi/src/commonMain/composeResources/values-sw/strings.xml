@@ -697,4 +697,6 @@
     <string name="downloads_cancel_selected_message">Kilichopakuliwa hadi sasa kitafutwa.</string>
     <string name="downloads_cancel_selected_keep">Usighairi</string>
     <string name="data_dir_unusable">YMusic haiwezi kufungua folda yake ya data, %1$s. Hakikisha ni folda unayoweza kuandika ndani yake, kisha ufungue YMusic tena. (%2$s)</string>
+    <string name="settings_save_diagnostic_log">Hifadhi kumbukumbu ya uchunguzi</string>
+    <string name="settings_save_diagnostic_log_hint">Hamisha nakala iliyobanwa ya kumbukumbu ya hivi karibuni ya programu</string>
 </resources>

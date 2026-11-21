@@ -697,4 +697,6 @@
     <string name="downloads_cancel_selected_message">आतापर्यंत डाउनलोड झालेले हटवले जाईल.</string>
     <string name="downloads_cancel_selected_keep">ठेवा</string>
     <string name="data_dir_unusable">YMusic त्याचे डेटा फोल्डर, %1$s, उघडू शकत नाही. हे असे फोल्डर आहे ज्यात तुम्ही लिहू शकता याची खात्री करा, नंतर YMusic पुन्हा उघडा. (%2$s)</string>
+    <string name="settings_save_diagnostic_log">निदान लॉग जतन करा</string>
+    <string name="settings_save_diagnostic_log_hint">अलीकडील ॲप लॉगची संकुचित प्रत निर्यात करा</string>
 </resources>

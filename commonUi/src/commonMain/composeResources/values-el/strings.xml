@@ -697,4 +697,6 @@
     <string name="downloads_cancel_selected_message">Ό,τι έχει ληφθεί μέχρι τώρα θα διαγραφεί.</string>
     <string name="downloads_cancel_selected_keep">Διατήρηση</string>
     <string name="data_dir_unusable">Το YMusic δεν μπορεί να ανοίξει τον φάκελο δεδομένων του, %1$s. Βεβαιωθείτε ότι είναι φάκελος στον οποίο μπορείτε να γράψετε και ανοίξτε ξανά το YMusic. (%2$s)</string>
+    <string name="settings_save_diagnostic_log">Αποθήκευση αρχείου διαγνωστικών</string>
+    <string name="settings_save_diagnostic_log_hint">Εξαγωγή συμπιεσμένου αντιγράφου του πρόσφατου αρχείου καταγραφής</string>
 </resources>

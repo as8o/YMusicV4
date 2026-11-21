@@ -723,4 +723,6 @@
     <string name="downloads_cancel_selected_message">Dosud stažená data budou smazána.</string>
     <string name="downloads_cancel_selected_keep">Ponechat</string>
     <string name="data_dir_unusable">YMusic nemůže otevřít svou složku s daty, %1$s. Ujistěte se, že je to složka, do které můžete zapisovat, a pak YMusic otevřete znovu. (%2$s)</string>
+    <string name="settings_save_diagnostic_log">Uložit diagnostický protokol</string>
+    <string name="settings_save_diagnostic_log_hint">Exportovat komprimovanou kopii nedávného protokolu aplikace</string>
 </resources>

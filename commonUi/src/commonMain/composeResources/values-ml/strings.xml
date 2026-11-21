@@ -697,4 +697,6 @@
     <string name="downloads_cancel_selected_message">ഇതുവരെ ഡൗൺലോഡ് ചെയ്തത് ഇല്ലാതാക്കും.</string>
     <string name="downloads_cancel_selected_keep">നിലനിർത്തുക</string>
     <string name="data_dir_unusable">YMusic-ന് അതിന്റെ ഡാറ്റ ഫോൾഡർ, %1$s, തുറക്കാൻ കഴിയുന്നില്ല. നിങ്ങൾക്ക് എഴുതാൻ കഴിയുന്ന ഒരു ഫോൾഡറാണെന്ന് ഉറപ്പാക്കുക, തുടർന്ന് YMusic വീണ്ടും തുറക്കുക. (%2$s)</string>
+    <string name="settings_save_diagnostic_log">ഡയഗ്നോസ്റ്റിക് ലോഗ് സംരക്ഷിക്കുക</string>
+    <string name="settings_save_diagnostic_log_hint">സമീപകാല ആപ്പ് ലോഗിന്റെ കംപ്രസ് ചെയ്ത പകർപ്പ് എക്സ്പോർട്ട് ചെയ്യുക</string>
 </resources>

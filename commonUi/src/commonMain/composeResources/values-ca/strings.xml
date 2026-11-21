@@ -710,4 +710,6 @@
     <string name="downloads_cancel_selected_message">S'eliminarà el que s'ha baixat fins ara.</string>
     <string name="downloads_cancel_selected_keep">Mantén</string>
     <string name="data_dir_unusable">YMusic no pot obrir la seva carpeta de dades, %1$s. Comprova que sigui una carpeta on puguis escriure i torna a obrir YMusic. (%2$s)</string>
+    <string name="settings_save_diagnostic_log">Desa el registre de diagnòstic</string>
+    <string name="settings_save_diagnostic_log_hint">Exporta una còpia comprimida del registre recent</string>
 </resources>

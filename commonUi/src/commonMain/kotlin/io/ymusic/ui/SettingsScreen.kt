@@ -47,7 +47,10 @@ import io.ymusic.settings.BoolSetting
 import io.ymusic.settings.flow
 import io.ymusic.settings.put
 import io.ymusic.ui.resources.Res
+import io.ymusic.ui.resources.a11y_loading
+import io.ymusic.ui.resources.device_link_error_generic
 import io.ymusic.ui.resources.dialog_cancel
+import io.ymusic.ui.resources.dialog_ok_done
 import io.ymusic.ui.resources.settings_audio_focus
 import io.ymusic.ui.resources.settings_audio_focus_apps
 import io.ymusic.ui.resources.settings_audio_focus_calls
@@ -65,6 +68,8 @@ import io.ymusic.ui.resources.settings_eq_hint
 import io.ymusic.ui.resources.settings_language
 import io.ymusic.ui.resources.settings_licenses
 import io.ymusic.ui.resources.settings_licenses_intro
+import io.ymusic.ui.resources.settings_save_diagnostic_log
+import io.ymusic.ui.resources.settings_save_diagnostic_log_hint
 import io.ymusic.ui.resources.settings_section_about
 import io.ymusic.ui.resources.settings_section_appearance
 import io.ymusic.ui.resources.settings_section_content
@@ -95,6 +100,7 @@ import io.ymusic.ui.resources.settings_versions_player
 import io.ymusic.ui.resources.sound_eq
 import io.ymusic.ui.resources.sound_speed
 import kmpcommon.log.Logger
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flowOf
@@ -225,7 +231,52 @@ fun SettingsScreen(graph: AppGraph, signedIn: Boolean = false, onLogin: () -> Un
         }
         SettingsSection(Res.string.settings_debug) {
             ToggleRow(graph, AppSettings.showFps, Res.string.settings_show_fps, Res.string.settings_show_fps_hint)
+            if (graph.exportDiagnosticLogs != null) DiagnosticLogRow(graph)
         }
+    }
+}
+
+@Composable
+private fun DiagnosticLogRow(graph: AppGraph) {
+    val exportLogs = graph.exportDiagnosticLogs ?: return
+    val scope = rememberCoroutineScope()
+    var busy by remember { mutableStateOf(false) }
+    var status by remember { mutableStateOf<StringResource?>(null) }
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .clickable(enabled = !busy, role = Role.Button) {
+                busy = true
+                status = null
+                scope.launch {
+                    try {
+                        if (exportLogs()) status = Res.string.dialog_ok_done
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        graph.logger?.fork("diagnostic-export")?.log(Logger.Level.WARN, "log export failed", e)
+                        status = Res.string.device_link_error_generic
+                    } finally {
+                        busy = false
+                    }
+                }
+            }
+            .padding(horizontal = DesignSpacing.SettingsRowHorizontal, vertical = DesignSpacing.SettingsRowVertical),
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text(
+                stringResource(Res.string.settings_save_diagnostic_log),
+                style = TextStyle(fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = DesignColors.Ink),
+            )
+            Text(
+                stringResource(if (busy) Res.string.a11y_loading else status ?: Res.string.settings_save_diagnostic_log_hint),
+                style = TextStyle(fontSize = 12.sp, color = DesignColors.InkSecondary),
+                modifier = Modifier.padding(top = DesignSpacing.Space2),
+            )
+        }
+        if (busy) CircularProgressIndicator(Modifier.size(18.dp), color = DesignColors.Accent)
     }
 }
 

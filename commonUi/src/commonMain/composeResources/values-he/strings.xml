@@ -710,4 +710,6 @@
     <string name="downloads_cancel_selected_message">מה שהורד עד עכשיו יימחק.</string>
     <string name="downloads_cancel_selected_keep">להשאיר</string>
     <string name="data_dir_unusable">YMusic לא יכולה לפתוח את תיקיית הנתונים שלה, %1$s. ודא שזו תיקייה שאפשר לכתוב בה, ואז פתח שוב את YMusic. (%2$s)</string>
+    <string name="settings_save_diagnostic_log">שמירת יומן אבחון</string>
+    <string name="settings_save_diagnostic_log_hint">ייצוא עותק דחוס של יומן האפליקציה האחרון</string>
 </resources>

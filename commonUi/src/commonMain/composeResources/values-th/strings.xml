@@ -684,4 +684,6 @@
     <string name="downloads_cancel_selected_message">ส่วนที่ดาวน์โหลดไปแล้วจะถูกลบ</string>
     <string name="downloads_cancel_selected_keep">เก็บไว้</string>
     <string name="data_dir_unusable">YMusic เปิดโฟลเดอร์ข้อมูลของแอป %1$s ไม่ได้ ตรวจสอบว่าเป็นโฟลเดอร์ที่คุณเขียนได้ แล้วเปิด YMusic อีกครั้ง (%2$s)</string>
+    <string name="settings_save_diagnostic_log">บันทึกบันทึกการวินิจฉัย</string>
+    <string name="settings_save_diagnostic_log_hint">ส่งออกสำเนาบีบอัดของบันทึกแอปล่าสุด</string>
 </resources>

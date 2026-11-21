@@ -723,4 +723,6 @@
     <string name="downloads_cancel_selected_message">Doteraz stiahnuté dáta sa odstránia.</string>
     <string name="downloads_cancel_selected_keep">Ponechať</string>
     <string name="data_dir_unusable">YMusic nemôže otvoriť svoj priečinok s údajmi, %1$s. Uistite sa, že je to priečinok, do ktorého môžete zapisovať, a potom YMusic otvorte znova. (%2$s)</string>
+    <string name="settings_save_diagnostic_log">Uložiť diagnostický denník</string>
+    <string name="settings_save_diagnostic_log_hint">Exportovať komprimovanú kópiu nedávneho denníka aplikácie</string>
 </resources>

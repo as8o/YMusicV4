@@ -710,4 +710,6 @@
     <string name="downloads_cancel_selected_message">Dosad preuzeti sadržaj bit će izbrisan.</string>
     <string name="downloads_cancel_selected_keep">Zadrži</string>
     <string name="data_dir_unusable">YMusic ne može otvoriti svoju mapu s podacima, %1$s. Provjerite je li to mapa u koju možete pisati, a zatim ponovno otvorite YMusic. (%2$s)</string>
+    <string name="settings_save_diagnostic_log">Spremi dijagnostički zapisnik</string>
+    <string name="settings_save_diagnostic_log_hint">Izvezi komprimiranu kopiju nedavnog zapisnika aplikacije</string>
 </resources>

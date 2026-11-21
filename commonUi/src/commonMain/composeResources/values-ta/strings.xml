@@ -697,4 +697,6 @@
     <string name="downloads_cancel_selected_message">இதுவரை பதிவிறக்கியவை நீக்கப்படும்.</string>
     <string name="downloads_cancel_selected_keep">வைத்திரு</string>
     <string name="data_dir_unusable">YMusic அதன் தரவுக் கோப்புறையான %1$s ஐத் திறக்க முடியவில்லை. அது நீங்கள் எழுதக்கூடிய கோப்புறை என்பதை உறுதிசெய்து, பிறகு YMusic ஐ மீண்டும் திறக்கவும். (%2$s)</string>
+    <string name="settings_save_diagnostic_log">கண்டறிதல் பதிவைச் சேமி</string>
+    <string name="settings_save_diagnostic_log_hint">சமீபத்திய செயலிப் பதிவின் சுருக்கப்பட்ட நகலை ஏற்றுமதி செய்</string>
 </resources>

@@ -697,4 +697,6 @@
     <string name="downloads_cancel_selected_message">Wixii ilaa hadda la soo dejiyay waa la tirtirayaa.</string>
     <string name="downloads_cancel_selected_keep">Hay</string>
     <string name="data_dir_unusable">YMusic ma furi karto galkadeeda xogta, %1$s. Hubi inay tahay gal aad wax ku qori karto, kadibna mar kale fur YMusic. (%2$s)</string>
+    <string name="settings_save_diagnostic_log">Kaydi diiwaanka ogaanshaha</string>
+    <string name="settings_save_diagnostic_log_hint">Dhoofi nuqul la cadaadiyey oo diiwaanka abka dhowaan ah</string>
 </resources>

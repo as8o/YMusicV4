@@ -697,4 +697,6 @@
     <string name="downloads_cancel_selected_message">Şimdiye kadar indirilenler silinecek.</string>
     <string name="downloads_cancel_selected_keep">Koru</string>
     <string name="data_dir_unusable">YMusic veri klasörünü (%1$s) açamıyor. Bunun yazabildiğiniz bir klasör olduğundan emin olun, ardından YMusic'i yeniden açın. (%2$s)</string>
+    <string name="settings_save_diagnostic_log">Tanılama günlüğünü kaydet</string>
+    <string name="settings_save_diagnostic_log_hint">Son uygulama günlüğünün sıkıştırılmış kopyasını dışa aktar</string>
 </resources>

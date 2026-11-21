@@ -697,4 +697,6 @@
     <string name="downloads_cancel_selected_message">මෙතෙක් බාගත් දේ මකා දැමෙනු ඇත.</string>
     <string name="downloads_cancel_selected_keep">තබා ගන්න</string>
     <string name="data_dir_unusable">YMusic හට එහි දත්ත ෆෝල්ඩරය, %1$s, විවෘත කළ නොහැක. එය ඔබට ලිවිය හැකි ෆෝල්ඩරයක් බව තහවුරු කර, පසුව YMusic නැවත විවෘත කරන්න. (%2$s)</string>
+    <string name="settings_save_diagnostic_log">දෝෂ නිර්ණය ලොගය සුරකින්න</string>
+    <string name="settings_save_diagnostic_log_hint">මෑත යෙදුම් ලොගයේ සම්පීඩිත පිටපතක් අපනයනය කරන්න</string>
 </resources>

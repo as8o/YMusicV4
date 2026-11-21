@@ -697,4 +697,6 @@
     <string name="downloads_cancel_selected_message">এখন পর্যন্ত যা ডাউনলোড হয়েছে তা মুছে ফেলা হবে।</string>
     <string name="downloads_cancel_selected_keep">রাখুন</string>
     <string name="data_dir_unusable">YMusic তার ডেটা ফোল্ডার, %1$s, খুলতে পারছে না। নিশ্চিত করুন যে এটি এমন একটি ফোল্ডার যেখানে আপনি লিখতে পারেন, তারপর আবার YMusic খুলুন। (%2$s)</string>
+    <string name="settings_save_diagnostic_log">ডায়াগনস্টিক লগ সংরক্ষণ করুন</string>
+    <string name="settings_save_diagnostic_log_hint">সাম্প্রতিক অ্যাপ লগের সংকুচিত কপি রপ্তানি করুন</string>
 </resources>

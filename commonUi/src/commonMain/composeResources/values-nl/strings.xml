@@ -697,4 +697,6 @@
     <string name="downloads_cancel_selected_message">Wat tot nu toe is gedownload, wordt verwijderd.</string>
     <string name="downloads_cancel_selected_keep">Behouden</string>
     <string name="data_dir_unusable">YMusic kan zijn gegevensmap, %1$s, niet openen. Zorg dat het een map is waarin je kunt schrijven en open YMusic daarna opnieuw. (%2$s)</string>
+    <string name="settings_save_diagnostic_log">Diagnoselog opslaan</string>
+    <string name="settings_save_diagnostic_log_hint">Exporteer een gecomprimeerde kopie van het recente applog</string>
 </resources>

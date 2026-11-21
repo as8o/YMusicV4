@@ -71,6 +71,7 @@ import io.ymusic.player.mse.MsePlayer
 import io.ymusic.player.showsVideo
 import io.ymusic.quickjs.QuickJsRuntime
 import io.ymusic.remoteconfig.ApiService
+import io.ymusic.remoteconfig.Features
 import io.ymusic.remoteconfig.HttpApiService
 import io.ymusic.remoteconfig.RemoteConfig
 import io.ymusic.remoteconfig.RunningBundles
@@ -118,6 +119,8 @@ import io.ymusic.ytmedia.cache.SqlDelightCacheStats
 import io.ymusic.ytmedia.cache.SqlDelightSegmentIndex
 import io.ymusic.ytmedia.cache.androidSegmentDatabaseDriver
 import io.ymusic.ytmedia.proxy.LocalMediaProxy
+import java.io.File
+import java.lang.ref.WeakReference
 import kmpcommon.WorkerThread
 import kmpcommon.log.Logger
 import kmpcommon.log.TeeLogger
@@ -127,6 +130,7 @@ import kmpffmpeg.metadata.FfmpegMetadataGetter
 import kmphttp.KmpHttpClient
 import kmphttp.RedirectOptions
 import kmphttp.create
+import kotlin.math.roundToInt
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
@@ -154,9 +158,6 @@ import okio.sink
 import okio.source
 import projectcommon.error.TechnicalException
 import projectcommon.log.captureUnlessEnvironmental
-import java.io.File
-import java.lang.ref.WeakReference
-import kotlin.math.roundToInt
 
 /**
  * The PROCESS-scoped half of the app graph: everything that must exist exactly once no matter how
@@ -206,7 +207,9 @@ class YMusicApplication : Application() {
     }
 
     /** The app log (`logs.db`): feedback export and the lines an error event sends. Lazy: needs a Context. */
-    val logStore: LogStore by lazy { LogStore(androidLogDatabaseDriver(this)) }
+    val logStore: LogStore by lazy {
+        LogStore(androidLogDatabaseDriver(this)).apply { setMaxLines(Features().logLines) }
+    }
 
     /** The app's root logger: the app log + Sentry events (no-op until Sentry.init), and logcat in debug builds only. */
     val rootLogger: Logger by lazy {
@@ -390,7 +393,7 @@ class YMusicApplication : Application() {
         bindErrorPolicy(appScope, remoteConfig, rootLogger.fork("error-policy"))
         bindSentryTags(appScope, remoteConfig)
         appScope.launch {
-            // The cap waits for the loaded config: the store trims nothing until it has one.
+            // Loaded configuration can adjust the initial rolling-log cap.
             remoteConfig.awaitLoaded()
             remoteConfig.features.collect { logStore.setMaxLines(it.logLines) }
         }
@@ -828,6 +831,27 @@ class YMusicApplication : Application() {
             },
             downloads = downloadService,
             captureFeedbackReport = captureFeedbackReportAction.takeIf { BuildConfig.SENTRY_DSN.isNotEmpty() },
+            exportDiagnosticLogs = {
+                val destination = documentCreator?.invoke("YM-diagnostic.log.gz", "application/gzip")
+                if (destination == null) {
+                    false
+                } else {
+                    withContext(Dispatchers.IO) {
+                        val temporary = File.createTempFile("ym-diagnostic-", ".log.gz", cacheDir)
+                        try {
+                            logStore.exportGzip(FileSystem.SYSTEM, temporary.toOkioPath())
+                            val output = contentResolver.openOutputStream(destination, "wt")
+                                ?: throw java.io.IOException("Cannot open diagnostic export destination")
+                            output.use { temporary.inputStream().use { input -> input.copyTo(it) } }
+                            true
+                        } finally {
+                            if (!temporary.delete()) {
+                                rootLogger.fork("diagnostic-export").log(Logger.Level.WARN, "temporary log export could not be removed")
+                            }
+                        }
+                    }
+                }
+            },
             platformInfo = listOfNotNull("Android ${android.os.Build.VERSION.RELEASE}", android.os.Build.SUPPORTED_ABIS.firstOrNull()).joinToString(" · "),
             createDocument = { name, mimeType ->
                 documentCreator?.invoke(name, mimeType)?.let { uri ->

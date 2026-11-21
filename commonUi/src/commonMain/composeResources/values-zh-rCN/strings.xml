@@ -684,4 +684,6 @@
     <string name="downloads_cancel_selected_message">已下载的部分将被删除。</string>
     <string name="downloads_cancel_selected_keep">保留</string>
     <string name="data_dir_unusable">YMusic 无法打开其数据文件夹 %1$s。请确认这是你可以写入的文件夹，然后重新打开 YMusic。(%2$s)</string>
+    <string name="settings_save_diagnostic_log">保存诊断日志</string>
+    <string name="settings_save_diagnostic_log_hint">导出近期应用日志的压缩副本</string>
 </resources>

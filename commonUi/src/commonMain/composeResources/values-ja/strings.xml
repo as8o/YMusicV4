@@ -684,4 +684,6 @@
     <string name="downloads_cancel_selected_message">これまでにダウンロードしたデータは削除されます。</string>
     <string name="downloads_cancel_selected_keep">キャンセルしない</string>
     <string name="data_dir_unusable">YMusic はデータフォルダ（%1$s）を開けません。書き込み可能なフォルダであることを確認してから、YMusic をもう一度開いてください。(%2$s)</string>
+    <string name="settings_save_diagnostic_log">診断ログを保存</string>
+    <string name="settings_save_diagnostic_log_hint">最近のアプリログを圧縮してエクスポート</string>
 </resources>

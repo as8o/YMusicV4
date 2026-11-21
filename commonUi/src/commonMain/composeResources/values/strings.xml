@@ -853,4 +853,6 @@
     <string name="downloads_cancel_selected_message">What was downloaded so far is deleted.</string>
     <string name="downloads_cancel_selected_keep">Keep</string>
     <string name="data_dir_unusable">YMusic can't open its data folder, %1$s. Make sure it's a folder you can write to, then open YMusic again. (%2$s)</string>
+    <string name="settings_save_diagnostic_log">Save diagnostic log</string>
+    <string name="settings_save_diagnostic_log_hint">Export a compressed copy of the recent app log</string>
 </resources>

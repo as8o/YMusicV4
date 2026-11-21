@@ -710,4 +710,6 @@
     <string name="downloads_cancel_selected_message">O que foi baixado até agora será excluído.</string>
     <string name="downloads_cancel_selected_keep">Manter</string>
     <string name="data_dir_unusable">O YMusic não consegue abrir sua pasta de dados, %1$s. Verifique se é uma pasta na qual você pode gravar e abra o YMusic novamente. (%2$s)</string>
+    <string name="settings_save_diagnostic_log">Guardar registo de diagnóstico</string>
+    <string name="settings_save_diagnostic_log_hint">Exportar uma cópia comprimida do registo recente da aplicação</string>
 </resources>

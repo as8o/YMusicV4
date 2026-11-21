@@ -697,4 +697,6 @@
     <string name="downloads_cancel_selected_message">अब तक डाउनलोड किया गया हिस्सा मिटा दिया जाएगा।</string>
     <string name="downloads_cancel_selected_keep">रखें</string>
     <string name="data_dir_unusable">YMusic अपना डेटा फ़ोल्डर, %1$s, नहीं खोल पा रहा है। पक्का करें कि यह ऐसा फ़ोल्डर है जिसमें आप लिख सकते हैं, फिर YMusic को फिर से खोलें। (%2$s)</string>
+    <string name="settings_save_diagnostic_log">डायग्नोस्टिक लॉग सहेजें</string>
+    <string name="settings_save_diagnostic_log_hint">हाल के ऐप लॉग की संपीड़ित प्रति निर्यात करें</string>
 </resources>

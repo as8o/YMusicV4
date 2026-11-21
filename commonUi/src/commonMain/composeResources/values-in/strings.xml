@@ -684,4 +684,6 @@
     <string name="downloads_cancel_selected_message">Bagian yang sudah diunduh akan dihapus.</string>
     <string name="downloads_cancel_selected_keep">Pertahankan</string>
     <string name="data_dir_unusable">YMusic tidak dapat membuka folder datanya, %1$s. Pastikan itu folder yang dapat Anda tulisi, lalu buka YMusic lagi. (%2$s)</string>
+    <string name="settings_save_diagnostic_log">Simpan log diagnostik</string>
+    <string name="settings_save_diagnostic_log_hint">Ekspor salinan terkompresi dari log aplikasi terbaru</string>
 </resources>

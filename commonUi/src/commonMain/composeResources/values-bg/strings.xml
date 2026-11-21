@@ -697,4 +697,6 @@
     <string name="downloads_cancel_selected_message">Изтегленото досега ще бъде изтрито.</string>
     <string name="downloads_cancel_selected_keep">Запазване</string>
     <string name="data_dir_unusable">YMusic не може да отвори папката си с данни, %1$s. Уверете се, че е папка, в която можете да записвате, след което отворете YMusic отново. (%2$s)</string>
+    <string name="settings_save_diagnostic_log">Запазване на диагностичния журнал</string>
+    <string name="settings_save_diagnostic_log_hint">Експортиране на компресирано копие на последния журнал</string>
 </resources>

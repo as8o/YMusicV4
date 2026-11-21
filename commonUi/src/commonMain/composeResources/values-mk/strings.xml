@@ -697,4 +697,6 @@
     <string name="downloads_cancel_selected_message">Досега преземеното ќе се избрише.</string>
     <string name="downloads_cancel_selected_keep">Задржи</string>
     <string name="data_dir_unusable">YMusic не може да ја отвори својата папка со податоци, %1$s. Проверете дали е папка во која можете да запишувате, а потоа повторно отворете го YMusic. (%2$s)</string>
+    <string name="settings_save_diagnostic_log">Зачувај дијагностички дневник</string>
+    <string name="settings_save_diagnostic_log_hint">Извези компресирана копија од неодамнешниот дневник на апликацијата</string>
 </resources>

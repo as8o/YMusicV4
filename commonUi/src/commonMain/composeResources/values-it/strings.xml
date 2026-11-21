@@ -710,4 +710,6 @@
     <string name="downloads_cancel_selected_message">Quanto scaricato finora verrà eliminato.</string>
     <string name="downloads_cancel_selected_keep">Mantieni</string>
     <string name="data_dir_unusable">YMusic non riesce ad aprire la sua cartella dei dati, %1$s. Assicurati che sia una cartella in cui puoi scrivere, poi riapri YMusic. (%2$s)</string>
+    <string name="settings_save_diagnostic_log">Salva registro diagnostico</string>
+    <string name="settings_save_diagnostic_log_hint">Esporta una copia compressa del registro recente dell’app</string>
 </resources>

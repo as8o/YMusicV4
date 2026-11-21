@@ -209,6 +209,8 @@ class AppGraph(
      * section, if any. Null drops the reports-off dialog and the message option from the Feedback section.
      */
     val captureFeedbackReport: (suspend (subject: String, message: String?) -> Unit)? = null,
+    /** Saves a compressed app log using the platform file picker; false means cancellation. */
+    val exportDiagnosticLogs: (suspend () -> Boolean)? = null,
     /** The OS and CPU for the Feedback section's info (e.g. "Android 16 · arm64-v8a"); null omits them. */
     val platformInfo: String? = null,
     /** The OS "save as" picker: a sink into the chosen file (the caller closes it), null when canceled.
