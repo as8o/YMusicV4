@@ -5,14 +5,12 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.SearchManager
-import android.content.ContentValues
 import android.content.Intent
 import android.graphics.Bitmap
 import android.net.Uri
 import android.net.wifi.WifiManager
 import android.os.Build
 import android.os.Bundle
-import android.os.Environment
 import android.os.PowerManager
 import android.os.SystemClock
 import android.provider.MediaStore
@@ -137,9 +135,6 @@ class PlaybackService : MediaLibraryService() {
             CoroutineExceptionHandler { _, e -> log?.fork("uncaught")?.captureError(e) },
     )
     private val searchResults = HashMap<String, List<MediaItem>>() // guarded by itself
-    private val browseTraceDispatcher = Dispatchers.IO.limitedParallelism(1)
-    private var browseTraceUri: Uri? = null
-    private var browseTraceLines = 0
 
     override fun onCreate() {
         super.onCreate()
@@ -453,18 +448,27 @@ class PlaybackService : MediaLibraryService() {
         override fun onConnectAsync(
             session: MediaSession,
             controller: MediaSession.ControllerInfo,
-        ): ListenableFuture<MediaSession.ConnectionResult> = Futures.immediateFuture(
-            MediaSession.ConnectionResult.AcceptedResultBuilder(session, controller)
-                .setAvailablePlayerCommands(MediaSession.ConnectionResult.DEFAULT_PLAYER_COMMANDS)
-                .setAvailableSessionCommands(
-                    MediaSession.ConnectionResult.DEFAULT_SESSION_AND_LIBRARY_COMMANDS.buildUpon()
-                        .add(COMMAND_SHUFFLE)
-                        .add(COMMAND_REPEAT)
-                        .add(COMMAND_CLOSE)
-                        .build(),
-                )
-                .build(),
-        )
+        ): ListenableFuture<MediaSession.ConnectionResult> {
+            traceBrowse(
+                "connect client=${controller.packageName} " +
+                    "autoCompanion=${session.isAutoCompanionController(controller)} " +
+                    "automotive=${session.isAutomotiveController(controller)} " +
+                    "trusted=${controller.isTrusted} verified=${controller.isPackageNameVerified} " +
+                    "hints=${diagnosticHints(controller.connectionHints)}",
+            )
+            return Futures.immediateFuture(
+                MediaSession.ConnectionResult.AcceptedResultBuilder(session, controller)
+                    .setAvailablePlayerCommands(MediaSession.ConnectionResult.DEFAULT_PLAYER_COMMANDS)
+                    .setAvailableSessionCommands(
+                        MediaSession.ConnectionResult.DEFAULT_SESSION_AND_LIBRARY_COMMANDS.buildUpon()
+                            .add(COMMAND_SHUFFLE)
+                            .add(COMMAND_REPEAT)
+                            .add(COMMAND_CLOSE)
+                            .build(),
+                    )
+                    .build(),
+            )
+        }
 
         override fun onCustomCommand(
             session: MediaSession,
@@ -553,7 +557,8 @@ class PlaybackService : MediaLibraryService() {
             }
             traceBrowse(
                 "root client=${browser.packageName} suggested=${params?.isSuggested} " +
-                    "recent=${params?.isRecent} offline=${params?.isOffline} returned=${root.mediaId}",
+                    "recent=${params?.isRecent} offline=${params?.isOffline} returned=${root.mediaId} " +
+                    "hints=${diagnosticHints(params?.extras)}",
             )
             // The legacy onGetRoot blocks the main thread until the future completes.
             return Futures.immediateFuture(LibraryResult.ofItem(root, params))
@@ -660,27 +665,33 @@ class PlaybackService : MediaLibraryService() {
     }
 
     private fun traceBrowse(message: String) {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return
-        val now = System.currentTimeMillis()
-        serviceScope.launch(browseTraceDispatcher) {
-            if (browseTraceLines >= 150) return@launch
-            browseTraceLines++
-            try {
-                val uri = browseTraceUri ?: contentResolver.insert(
-                    MediaStore.Downloads.EXTERNAL_CONTENT_URI,
-                    ContentValues().apply {
-                        put(MediaStore.MediaColumns.DISPLAY_NAME, "YM-AA-For-You-$now.txt")
-                        put(MediaStore.MediaColumns.MIME_TYPE, "text/plain")
-                        put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
-                    },
-                )?.also { browseTraceUri = it } ?: return@launch
-                contentResolver.openOutputStream(uri, "wa")?.bufferedWriter()?.use {
-                    it.appendLine("$now $message")
+        log?.fork("aa-browse")?.log(Logger.Level.INFO, message.take(4_096))
+    }
+
+    @Suppress("DEPRECATION")
+    private fun diagnosticHints(bundle: Bundle?): String {
+        if (bundle == null) return "{}"
+        return try {
+            val keys = bundle.keySet().sorted()
+            keys.take(32).joinToString(prefix = "{", postfix = if (keys.size > 32) ", …}" else "}") { key ->
+                val sensitive = listOf("token", "cookie", "password", "credential", "auth", "secret", "email", "account")
+                    .any { key.contains(it, ignoreCase = true) }
+                val value = if (sensitive) {
+                    "<redacted>"
+                } else {
+                    when (val hint = bundle.get(key)) {
+                        null -> "null"
+                        is String -> hint.take(128).replace('\n', ' ')
+                        is Boolean, is Int, is Long, is Float, is Double -> hint.toString()
+                        is Bundle -> "<Bundle keys=${hint.keySet().sorted().take(16)}>"
+                        else -> "<${hint.javaClass.simpleName}>"
+                    }
                 }
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-                log?.log(Logger.Level.WARN, "AA browse trace write failed", e)
+                "${key.take(128)}=$value"
             }
+        } catch (e: RuntimeException) {
+            log?.fork("aa-browse")?.log(Logger.Level.WARN, "cannot read controller hints", e)
+            "<unreadable>"
         }
     }
 
