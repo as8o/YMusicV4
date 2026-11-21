@@ -483,10 +483,15 @@ class PlaybackService : MediaLibraryService() {
             session: MediaLibrarySession,
             browser: MediaSession.ControllerInfo,
             params: LibraryParams?,
-        ): ListenableFuture<LibraryResult<MediaItem>> =
-            // Must be already done: the legacy onGetRoot blocks the main thread until this resolves,
-            // and its completion callback is posted to that same main thread — a pending future deadlocks.
-            Futures.immediateFuture(LibraryResult.ofItem(MediaBrowseTree.ROOT_ITEM, params))
+        ): ListenableFuture<LibraryResult<MediaItem>> {
+            val root = if (params?.isSuggested == true && !params.isOffline) {
+                MediaBrowseTree.SUGGESTED_ROOT_ITEM
+            } else {
+                MediaBrowseTree.ROOT_ITEM
+            }
+            // The legacy onGetRoot blocks the main thread until the future completes.
+            return Futures.immediateFuture(LibraryResult.ofItem(root, params))
+        }
 
         override fun onGetChildren(
             session: MediaLibrarySession,
@@ -497,7 +502,7 @@ class PlaybackService : MediaLibraryService() {
             params: LibraryParams?,
         ): ListenableFuture<LibraryResult<ImmutableList<MediaItem>>> = future {
             val tree = browseTree() ?: return@future LibraryResult.ofError(LibraryResult.RESULT_ERROR_UNKNOWN)
-            LibraryResult.ofItemList(ImmutableList.copyOf(tree.children(parentId, page, pageSize)), params)
+            LibraryResult.ofItemList(ImmutableList.copyOf(tree.children(parentId, page, pageSize, browser.packageName != GOOGLE_APP_PACKAGE)), params)
         }
 
         override fun onGetItem(
@@ -944,6 +949,7 @@ class PlaybackService : MediaLibraryService() {
     }
 
     private companion object {
+        private const val GOOGLE_APP_PACKAGE = "com.google.android.googlequicksearchbox"
         /** How long an Auto browse call waits for a cold-start graph before failing. */
         const val INIT_TIMEOUT_MS = 30_000L
         const val CHANNEL_ID = "io.ymusic.playback"

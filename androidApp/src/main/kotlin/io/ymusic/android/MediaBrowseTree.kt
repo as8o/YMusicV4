@@ -104,8 +104,9 @@ class MediaBrowseTree(private val context: Context, private val graph: AppGraph)
         graph.engines.extractPlaylistDetail(url)
     }
 
-    suspend fun children(parentId: String, page: Int, pageSize: Int): List<MediaItem> {
+    suspend fun children(parentId: String, page: Int, pageSize: Int, includeTrending: Boolean): List<MediaItem> {
         val all = when {
+            parentId == SUGGESTED_ROOT -> suggestedVideos()
             parentId == ROOT -> listOf(
                 browsable(TAB_LIBRARY, getString(Res.string.section_library)),
                 browsable(TAB_DISCOVER, getString(Res.string.section_discover)),
@@ -116,11 +117,13 @@ class MediaBrowseTree(private val context: Context, private val graph: AppGraph)
                 browsable(LIB_PLAYLISTS, getString(Res.string.library_tab_playlists)),
             )
             parentId == TAB_DISCOVER -> buildList {
-                add(browsable(DISC_TRENDING, getString(Res.string.tab_music)))
-                add(browsable(DISC_HOME, getString(Res.string.tab_home)))
-                if (!graph.guest && graph.engines.ytLoginStatus()) {
-                    add(browsable(DISC_ACCOUNT, getString(Res.string.tab_account_library)))
-                }
+                val signedIn = !graph.guest && graph.engines.ytLoginStatus()
+                val home = browsable(DISC_HOME, getString(Res.string.tab_home))
+                // Android Auto can use browse order when it falls back to building dashboard suggestions.
+                if (signedIn) add(home)
+                if (includeTrending) add(browsable(DISC_TRENDING, getString(Res.string.tab_music)))
+                if (!signedIn) add(home)
+                if (signedIn) add(browsable(DISC_ACCOUNT, getString(Res.string.tab_account_library)))
             }
             // The nav links are the app's own (same as the phone's AccountLibraryScreen).
             parentId == DISC_ACCOUNT -> listOf(
@@ -139,7 +142,7 @@ class MediaBrowseTree(private val context: Context, private val graph: AppGraph)
             parentId == LIB_SONGS || parentId.startsWith(LOCAL_LIST_PREFIX) ->
                 localSongs(parentId).also { lastLocal = parentId to it }
                     .map { song -> song.toMediaItem(parentId) }
-            parentId == DISC_TRENDING -> feedChildren(graph.engines.extractTrendingMusicFeed())
+            parentId == DISC_TRENDING && includeTrending -> feedChildren(graph.engines.extractTrendingMusicFeed())
             parentId == DISC_HOME -> feedChildren(graph.engines.extractHomeFeed())
             parentId == YTM_HOME -> feedChildren(graph.engines.extractMusicHome())
             parentId == YTM_EXPLORE -> feedChildren(graph.engines.extractMusicExplore())
@@ -159,6 +162,7 @@ class MediaBrowseTree(private val context: Context, private val graph: AppGraph)
 
     suspend fun item(mediaId: String): MediaItem? = when {
         mediaId == ROOT -> rootItem()
+        mediaId == SUGGESTED_ROOT -> SUGGESTED_ROOT_ITEM
         mediaId.startsWith(YT_SONG_PREFIX) -> {
             val videoId = mediaId.removePrefix(YT_SONG_PREFIX)
             ytItem(videoId)?.toMediaItem(groupTitle = null)
@@ -271,6 +275,20 @@ class MediaBrowseTree(private val context: Context, private val graph: AppGraph)
 
     // ---- engine feeds ----
 
+    private suspend fun suggestedVideos(): List<MediaItem> {
+        if (graph.guest || !graph.engines.ytLoginStatus()) return emptyList()
+        return graph.engines.extractHomeFeed().sections.asSequence()
+            .flatMap { it.items }
+            .filter { it.kind == YtFeedItem.KIND_VIDEO }
+            .distinctBy { it.id }
+            .take(SUGGESTED_VIDEO_LIMIT)
+            .map { item ->
+                remember(item)
+                item.toMediaItem(groupTitle = null)
+            }
+            .toList()
+    }
+
     /** Shelves flattened into one list: videos playable, playlists/albums browsable, each tagged
      *  with its shelf title as a group heading; channels and nav tags have no Auto surface. */
     private fun feedChildren(feed: YtFeedPage, listUrl: String? = null): List<MediaItem> = feed.sections.flatMap { section ->
@@ -347,6 +365,8 @@ class MediaBrowseTree(private val context: Context, private val graph: AppGraph)
 
     companion object {
         const val ROOT = "root"
+        private const val SUGGESTED_ROOT = "suggested"
+        private const val SUGGESTED_VIDEO_LIMIT = 10
 
         /** Built without the graph: the root query is answered before the graph exists. */
         val ROOT_ITEM: MediaItem = MediaItem.Builder()
@@ -360,6 +380,8 @@ class MediaBrowseTree(private val context: Context, private val graph: AppGraph)
                     .build(),
             )
             .build()
+
+        val SUGGESTED_ROOT_ITEM: MediaItem = ROOT_ITEM.buildUpon().setMediaId(SUGGESTED_ROOT).build()
 
         const val TAB_LIBRARY = "tab_library"
         const val TAB_DISCOVER = "tab_discover"
