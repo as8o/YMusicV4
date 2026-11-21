@@ -15,7 +15,7 @@ This document tracks the current YM patch set and links to historical *immutable
 ## Upgrade on 2026-11-21
 
 - Active fixes apply to upstream 4.0.27. Upstream still provides playlist-context playback and Video Details.
-- YM branding, signing, build workflow and browse tracing are excluded from all active fix branches. Browse tracing is included in the main YM build.
+- YM branding, signing, build workflow and browse tracing are excluded from all active fix branches. Browse tracing uses the standard rolling app logger in the main YM build. Settings → Debug → Save diagnostic log exports a compressed copy through the system file picker. AA lines are bounded and include controller classification and connection/root hints. Temporary exports are deleted after use; abandoned private export files older than a day are cleaned at startup.
 - Daily source before the upgrade was 9b22ec2896db328dec7aa06f0a2e58e99ab25a9d, successful build 43648015830.
 - The latest Home-only diagnostic source was 4fcb4a375bc868cb90b15caf518f3174b2ee0d47, successful build 43830159730. Its functional Home-only change is retained. Its Downloads trace is now included in the main YM build.
 - Packaging conflicts were resolved by retaining upstream appVersionCode() as YM's fallback and upstream Windows development-instance isolation with the stable YM release identity.

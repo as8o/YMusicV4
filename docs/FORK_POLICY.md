@@ -5,7 +5,7 @@
 - `master` is an **exact, commit-for-commit mirror** of `ymusic-io/YMusicV4:master`. Do not commit YM code, docs, workflows, or metadata into it. Sync by fast-forward whenever possible; if the fork has historical unrelated commits, archive the old head and reset once with an expected-SHA lease.
 - `ym/main` is the **only daily-use YM product branch**. Start upstream updates from the current upstream source, and add only necessary active fixes and YM identity/build changes.
 - `fix/*` is for isolated upstream-compatible patches, created from the exact upstream commit being fixed. Keep branding and diagnostics out of an upstream submission.
-- Diagnostic logging belongs in `ym/main` when useful. Build and distribute one main YM APK with those diagnostics included. Provide a verified direct APK download link with every delivered build.
+- Diagnostic logging belongs in `ym/main` when useful. Use the standard bounded app logger and on-demand export from Settings → Debug. Build and distribute one main YM APK with those diagnostics included. Provide a verified direct APK download link with every delivered build.
 - `archive/*` retains old implementations/history permanently; do not rewrite.
 - `ym-checkpoint-* ` annotated tags and Releases identify durable recovery points. Tag names include the upstream version and checkpoint date. Do not move checkpoint tags. Keep signed package artifacts, checksums, baseline SHA, build SHA, signing identity evidence, original diff links, validation findings, and which fixes were later superseded.
 
